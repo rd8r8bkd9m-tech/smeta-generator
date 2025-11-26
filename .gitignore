@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+.env*.local
+.DS_Store
+*.log
+.turbo/
+.wasm-pack-cache/
+target/
+pkg/
