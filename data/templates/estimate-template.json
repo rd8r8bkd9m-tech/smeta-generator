@@ -1,0 +1,146 @@
+{
+  "version": "1.0",
+  "templates": [
+    {
+      "id": "estimate-basic",
+      "name": "Локальная смета (базовый)",
+      "description": "Базовый шаблон локальной сметы",
+      "format": "xlsx",
+      "sections": [
+        {
+          "name": "header",
+          "fields": [
+            { "name": "documentNumber", "label": "Номер документа", "type": "string" },
+            { "name": "documentDate", "label": "Дата документа", "type": "date" },
+            { "name": "projectName", "label": "Наименование объекта", "type": "string" },
+            { "name": "contractorName", "label": "Подрядчик", "type": "string" },
+            { "name": "customerName", "label": "Заказчик", "type": "string" }
+          ]
+        },
+        {
+          "name": "items",
+          "columns": [
+            { "name": "number", "label": "№ п/п", "width": 40 },
+            { "name": "code", "label": "Шифр расценки", "width": 120 },
+            { "name": "name", "label": "Наименование работ и затрат", "width": 300 },
+            { "name": "unit", "label": "Ед. изм.", "width": 60 },
+            { "name": "quantity", "label": "Кол-во", "width": 80 },
+            { "name": "unitPrice", "label": "Цена за ед.", "width": 100 },
+            { "name": "total", "label": "Стоимость", "width": 120 }
+          ]
+        },
+        {
+          "name": "summary",
+          "fields": [
+            { "name": "subtotal", "label": "Итого прямые затраты", "type": "currency" },
+            { "name": "overhead", "label": "Накладные расходы", "type": "currency" },
+            { "name": "profit", "label": "Сметная прибыль", "type": "currency" },
+            { "name": "totalBeforeVat", "label": "Итого без НДС", "type": "currency" },
+            { "name": "vat", "label": "НДС 20%", "type": "currency" },
+            { "name": "total", "label": "ВСЕГО по смете", "type": "currency" }
+          ]
+        },
+        {
+          "name": "signatures",
+          "fields": [
+            { "name": "compilerPosition", "label": "Составил", "type": "string" },
+            { "name": "compilerName", "label": "ФИО", "type": "string" },
+            { "name": "checkerPosition", "label": "Проверил", "type": "string" },
+            { "name": "checkerName", "label": "ФИО", "type": "string" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ks2-form",
+      "name": "Акт КС-2",
+      "description": "Акт о приемке выполненных работ (форма КС-2)",
+      "format": "xlsx",
+      "sections": [
+        {
+          "name": "header",
+          "fields": [
+            { "name": "actNumber", "label": "Номер акта", "type": "string" },
+            { "name": "actDate", "label": "Дата акта", "type": "date" },
+            { "name": "contractNumber", "label": "Номер договора", "type": "string" },
+            { "name": "contractDate", "label": "Дата договора", "type": "date" },
+            { "name": "investor", "label": "Инвестор", "type": "string" },
+            { "name": "customer", "label": "Заказчик", "type": "string" },
+            { "name": "contractor", "label": "Подрядчик", "type": "string" },
+            { "name": "objectName", "label": "Стройка", "type": "string" },
+            { "name": "objectAddress", "label": "Адрес", "type": "string" },
+            { "name": "reportPeriodFrom", "label": "Отчетный период с", "type": "date" },
+            { "name": "reportPeriodTo", "label": "Отчетный период по", "type": "date" }
+          ]
+        },
+        {
+          "name": "items",
+          "columns": [
+            { "name": "number", "label": "№ п/п", "width": 40 },
+            { "name": "estimateNumber", "label": "Номер сметы", "width": 100 },
+            { "name": "name", "label": "Наименование работ", "width": 300 },
+            { "name": "unit", "label": "Ед. изм.", "width": 60 },
+            { "name": "quantityEstimate", "label": "По смете", "width": 80 },
+            { "name": "quantityActual", "label": "Выполнено", "width": 80 },
+            { "name": "unitPrice", "label": "Цена за ед.", "width": 100 },
+            { "name": "total", "label": "Стоимость", "width": 120 }
+          ]
+        },
+        {
+          "name": "summary",
+          "fields": [
+            { "name": "totalBeforeVat", "label": "Итого без НДС", "type": "currency" },
+            { "name": "vat", "label": "НДС", "type": "currency" },
+            { "name": "total", "label": "Всего с НДС", "type": "currency" }
+          ]
+        },
+        {
+          "name": "signatures",
+          "fields": [
+            { "name": "customerRepresentative", "label": "Заказчик", "type": "string" },
+            { "name": "contractorRepresentative", "label": "Подрядчик", "type": "string" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ks3-form",
+      "name": "Справка КС-3",
+      "description": "Справка о стоимости выполненных работ (форма КС-3)",
+      "format": "xlsx",
+      "sections": [
+        {
+          "name": "header",
+          "fields": [
+            { "name": "referenceNumber", "label": "Номер справки", "type": "string" },
+            { "name": "referenceDate", "label": "Дата справки", "type": "date" },
+            { "name": "contractNumber", "label": "Номер договора", "type": "string" },
+            { "name": "investor", "label": "Инвестор", "type": "string" },
+            { "name": "customer", "label": "Заказчик", "type": "string" },
+            { "name": "contractor", "label": "Подрядчик", "type": "string" },
+            { "name": "objectName", "label": "Стройка", "type": "string" },
+            { "name": "reportPeriodFrom", "label": "Отчетный период с", "type": "date" },
+            { "name": "reportPeriodTo", "label": "Отчетный период по", "type": "date" }
+          ]
+        },
+        {
+          "name": "items",
+          "columns": [
+            { "name": "number", "label": "№ п/п", "width": 40 },
+            { "name": "name", "label": "Наименование работ", "width": 300 },
+            { "name": "code", "label": "Код", "width": 80 },
+            { "name": "contractAmount", "label": "По договору", "width": 120 },
+            { "name": "previousAmount", "label": "С начала года", "width": 120 },
+            { "name": "currentAmount", "label": "За отчетный период", "width": 120 }
+          ]
+        },
+        {
+          "name": "summary",
+          "fields": [
+            { "name": "total", "label": "Итого", "type": "currency" }
+          ]
+        }
+      ]
+    }
+  ]
+}

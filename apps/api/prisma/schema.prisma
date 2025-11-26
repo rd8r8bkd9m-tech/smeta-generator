@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(USER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  clients   Client[]
+  estimates Estimate[]
+
+  @@map("users")
+}
+
+model Client {
+  id           String     @id @default(cuid())
+  name         String
+  type         ClientType @default(COMPANY)
+  contact      String?
+  phone        String?
+  email        String?
+  address      String?
+  inn          String?
+  kpp          String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  projects     Project[]
+
+  @@map("clients")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(DRAFT)
+  totalAmount Float         @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  clientId    String?
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  estimates   Estimate[]
+
+  @@map("projects")
+}
+
+model Estimate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  items       Json
+  subtotal    Float    @default(0)
+  overhead    Float    @default(0)
+  profit      Float    @default(0)
+  total       Float    @default(0)
+  options     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("estimates")
+}
+
+model Normative {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  unit        String
+  price       Float
+  type        NormativeType
+  category    String?
+  description String?
+  materials   Json?
+  labor       Json?
+  equipment   Json?
+  validFrom   DateTime @default(now())
+  validTo     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("normatives")
+}
+
+model Material {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  unit        String
+  price       Float
+  category    String?
+  supplier    String?
+  description String?
+  validFrom   DateTime @default(now())
+  validTo     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("materials")
+}
+
+enum Role {
+  USER
+  ADMIN
+  MANAGER
+}
+
+enum ClientType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum NormativeType {
+  FER
+  GESN
+  TER
+  TSN
+}
