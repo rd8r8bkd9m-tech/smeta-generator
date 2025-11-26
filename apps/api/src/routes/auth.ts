@@ -2,11 +2,21 @@ import { Router } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import rateLimit from 'express-rate-limit'
 
 const router = Router()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+
+// Rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -33,7 +43,7 @@ function generateToken(user: { id: string; email: string; name: string }) {
 }
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { email, password, name } = RegisterSchema.parse(req.body)
     
@@ -72,7 +82,7 @@ router.post('/register', async (req, res) => {
 })
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = LoginSchema.parse(req.body)
     
@@ -104,7 +114,7 @@ router.post('/login', async (req, res) => {
 })
 
 // Get current user
-router.get('/me', async (req, res) => {
+router.get('/me', authLimiter, async (req, res) => {
   const authHeader = req.headers.authorization
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -122,7 +132,7 @@ router.get('/me', async (req, res) => {
 })
 
 // Refresh token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', authLimiter, async (req, res) => {
   const authHeader = req.headers.authorization
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
