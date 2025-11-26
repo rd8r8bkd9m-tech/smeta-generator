@@ -1,0 +1,58 @@
+import express from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import compression from 'compression'
+import morgan from 'morgan'
+import dotenv from 'dotenv'
+
+import calculatorRoutes from './routes/calculator.js'
+import projectsRoutes from './routes/projects.js'
+import clientsRoutes from './routes/clients.js'
+import authRoutes from './routes/auth.js'
+
+dotenv.config()
+
+const app = express()
+const PORT = process.env.PORT || 4000
+
+// Middleware
+app.use(helmet())
+app.use(compression())
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  credentials: true,
+}))
+app.use(express.json())
+app.use(morgan('dev'))
+
+// Routes
+app.use('/api/calculator', calculatorRoutes)
+app.use('/api/projects', projectsRoutes)
+app.use('/api/clients', clientsRoutes)
+app.use('/api/auth', authRoutes)
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// Error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err.stack)
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+  })
+})
+
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not Found' })
+})
+
+app.listen(PORT, () => {
+  console.log(`🚀 API Server running on http://localhost:${PORT}`)
+  console.log(`📚 Health check: http://localhost:${PORT}/api/health`)
+})
+
+export default app
