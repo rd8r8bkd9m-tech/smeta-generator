@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
 
-const router = Router()
+const router: RouterType = Router()
 
 // Validation schemas
 const CalculateItemSchema = z.object({

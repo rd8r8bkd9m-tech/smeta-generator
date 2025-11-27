@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
 
-const router = Router()
+const router: RouterType = Router()
 
 // Validation schemas
 const ProjectSchema = z.object({
@@ -111,10 +111,10 @@ router.post('/:id/estimates', async (req, res) => {
     createdAt: new Date().toISOString(),
   }
   
-  const proj = project as { estimates: unknown[], totalAmount: number }
+  const proj = project as { estimates: Array<{ total?: number }>, totalAmount: number }
   proj.estimates.push(estimateWithId)
   proj.totalAmount = proj.estimates.reduce(
-    (sum: number, est: { total?: number }) => sum + (est.total || 0),
+    (sum, est) => sum + (est.total || 0),
     0
   )
   

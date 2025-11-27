@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { type Application } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
@@ -12,7 +12,7 @@ import authRoutes from './routes/auth.js'
 
 dotenv.config()
 
-const app = express()
+const app: Application = express()
 const PORT = process.env.PORT || 4000
 
 // Middleware
