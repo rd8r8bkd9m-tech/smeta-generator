@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Plus, Search, FolderOpen, MoreVertical, Calendar, DollarSign } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus, Search, FolderOpen, Calendar, TrendingUp, Sparkles, Filter, ArrowUpRight } from 'lucide-react'
+import { GlassCard, Badge, AnimatedNumber, FAB } from '../design-system/components'
+import clsx from 'clsx'
 
 interface Project {
   id: string
@@ -41,22 +44,41 @@ const mockProjects: Project[] = [
   },
 ]
 
-const statusLabels = {
-  draft: { label: 'Черновик', color: 'bg-secondary-100 text-secondary-700' },
-  in_progress: { label: 'В работе', color: 'bg-blue-100 text-blue-700' },
-  completed: { label: 'Завершен', color: 'bg-green-100 text-green-700' },
-  archived: { label: 'Архив', color: 'bg-secondary-200 text-secondary-600' },
+const statusConfig = {
+  draft: { 
+    label: 'Черновик', 
+    variant: 'default' as const,
+    gradient: 'from-slate-400 to-slate-500'
+  },
+  in_progress: { 
+    label: 'В работе', 
+    variant: 'info' as const,
+    gradient: 'from-blue-400 to-blue-500'
+  },
+  completed: { 
+    label: 'Завершен', 
+    variant: 'success' as const,
+    gradient: 'from-emerald-400 to-emerald-500'
+  },
+  archived: { 
+    label: 'Архив', 
+    variant: 'warning' as const,
+    gradient: 'from-amber-400 to-amber-500'
+  },
 }
 
 export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [projects] = useState<Project[]>(mockProjects)
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
 
-  const filteredProjects = projects.filter(
-    project =>
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.client.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    const matchesStatus = !selectedStatus || project.status === selectedStatus
+    return matchesSearch && matchesStatus
+  })
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -74,81 +96,204 @@ export default function ProjectsPage() {
     })
   }
 
+  const totalAmount = projects.reduce((sum, p) => sum + p.totalAmount, 0)
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-secondary-900">Проекты</h1>
-          <p className="text-secondary-600">Управление сметными проектами</p>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
+              Проекты
+            </h1>
+            <Badge variant="gradient" size="sm">
+              {projects.length}
+            </Badge>
+          </div>
+          <p className="text-secondary-600 dark:text-secondary-400">
+            Управление сметными проектами
+          </p>
         </div>
-        <button className="btn btn-primary flex items-center space-x-2">
+        <Link to="/calculator" className="btn btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
           <span>Новый проект</span>
-        </button>
+        </Link>
       </div>
 
-      <div className="card">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-amber-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+              <FolderOpen className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400">Всего проектов</p>
+              <p className="text-2xl font-bold text-secondary-900 dark:text-white">
+                <AnimatedNumber value={projects.length} />
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400">Общая сумма</p>
+              <p className="text-2xl font-bold text-secondary-900 dark:text-white">
+                <AnimatedNumber value={totalAmount / 1000000} suffix=" млн ₽" decimals={1} />
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-secondary-500 dark:text-secondary-400">В работе</p>
+              <p className="text-2xl font-bold text-secondary-900 dark:text-white">
+                <AnimatedNumber value={projects.filter(p => p.status === 'in_progress').length} />
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Search and Filters */}
+      <GlassCard className="p-6">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
             <input
               type="text"
               placeholder="Поиск проектов..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input pl-10"
+              className="input pl-11"
             />
+          </div>
+          
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setSelectedStatus(null)}
+              className={clsx(
+                'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200',
+                !selectedStatus
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                  : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+              )}
+            >
+              <Filter className="w-4 h-4" />
+              Все
+            </button>
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedStatus(selectedStatus === key ? null : key)}
+                className={clsx(
+                  'px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200',
+                  selectedStatus === key
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                    : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                )}
+              >
+                {config.label}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Projects Grid */}
         <div className="grid gap-4">
-          {filteredProjects.map((project) => (
-            <div
+          {filteredProjects.map((project, index) => (
+            <Link
               key={project.id}
-              className="border border-secondary-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-sm transition-all cursor-pointer"
+              to={`/projects/${project.id}`}
+              className={clsx(
+                'group relative block p-5 rounded-xl',
+                'bg-white dark:bg-secondary-800/50',
+                'border border-secondary-100 dark:border-secondary-700/50',
+                'hover:border-primary-200 dark:hover:border-primary-700/50',
+                'hover:shadow-lg hover:shadow-primary-500/5',
+                'transition-all duration-300',
+                'stagger-item'
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <FolderOpen className="w-5 h-5 text-primary-600" />
+              {/* Status gradient indicator */}
+              <div className={clsx(
+                'absolute left-0 top-4 bottom-4 w-1 rounded-r-full',
+                `bg-gradient-to-b ${statusConfig[project.status].gradient}`
+              )} />
+
+              <div className="flex items-start justify-between pl-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-900/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <FolderOpen className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-secondary-900">{project.name}</h3>
-                    <p className="text-sm text-secondary-600">{project.client}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusLabels[project.status].color}`}>
-                        {statusLabels[project.status].label}
-                      </span>
-                      <span className="flex items-center text-xs text-secondary-500">
-                        <Calendar className="w-3 h-3 mr-1" />
+                    <h3 className="font-semibold text-secondary-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {project.name}
+                    </h3>
+                    <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-3">
+                      {project.client}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={statusConfig[project.status].variant}>
+                        {statusConfig[project.status].label}
+                      </Badge>
+                      <span className="flex items-center text-xs text-secondary-500 dark:text-secondary-400">
+                        <Calendar className="w-3.5 h-3.5 mr-1" />
                         {formatDate(project.updatedAt)}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                
+                <div className="flex items-start gap-4">
                   <div className="text-right">
-                    <div className="flex items-center text-lg font-semibold text-secondary-900">
-                      <DollarSign className="w-4 h-4 text-secondary-400" />
+                    <div className="text-lg font-bold text-secondary-900 dark:text-white">
                       {formatCurrency(project.totalAmount)}
                     </div>
-                    <div className="text-xs text-secondary-500">Общая сумма</div>
+                    <div className="text-xs text-secondary-500 dark:text-secondary-400">
+                      Общая сумма
+                    </div>
                   </div>
-                  <button className="p-2 text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 rounded-lg">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                  <ArrowUpRight className="w-5 h-5 text-secondary-300 dark:text-secondary-600 group-hover:text-primary-500 dark:group-hover:text-primary-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
         {filteredProjects.length === 0 && (
-          <div className="text-center py-12">
-            <FolderOpen className="w-12 h-12 text-secondary-300 mx-auto mb-4" />
-            <p className="text-secondary-500">Проекты не найдены</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-secondary-100 dark:bg-secondary-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FolderOpen className="w-8 h-8 text-secondary-400 dark:text-secondary-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2">
+              Проекты не найдены
+            </h3>
+            <p className="text-secondary-500 dark:text-secondary-400 max-w-sm mx-auto">
+              Попробуйте изменить параметры поиска или создайте новый проект
+            </p>
           </div>
         )}
+      </GlassCard>
+
+      {/* FAB for mobile */}
+      <div className="fixed bottom-6 right-6 md:hidden">
+        <FAB 
+          icon={Plus} 
+          onClick={() => window.location.href = '/calculator'}
+        />
       </div>
     </div>
   )
