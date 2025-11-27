@@ -1,5 +1,6 @@
 import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
+import prisma from '../lib/prisma.js'
 
 const router: RouterType = Router()
 
@@ -103,33 +104,186 @@ router.get('/templates', async (_req, res) => {
 // Save estimate
 router.post('/estimates', async (req, res) => {
   try {
-    const estimate = req.body
+    const { name, description, items, subtotal, overhead, profit, total, options, userId, projectId } = req.body
     
-    // In production, save to database
-    const savedEstimate = {
-      id: `EST-${Date.now().toString(36).toUpperCase()}`,
-      ...estimate,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' })
     }
     
-    res.status(201).json(savedEstimate)
+    const estimate = await prisma.estimate.create({
+      data: {
+        name: name || 'Новая смета',
+        description,
+        items: items || [],
+        subtotal: subtotal || 0,
+        overhead: overhead || 0,
+        profit: profit || 0,
+        total: total || 0,
+        options,
+        userId,
+        projectId,
+      },
+    })
+    
+    res.status(201).json(estimate)
   } catch (error) {
-    throw error
+    console.error('Error creating estimate:', error)
+    res.status(500).json({ error: 'Failed to create estimate' })
   }
 })
 
 // Get estimates
-router.get('/estimates', async (_req, res) => {
-  // In production, fetch from database
-  res.json([])
+router.get('/estimates', async (req, res) => {
+  try {
+    const { userId, projectId } = req.query
+    
+    const where: { userId?: string; projectId?: string } = {}
+    if (userId) where.userId = String(userId)
+    if (projectId) where.projectId = String(projectId)
+    
+    const estimates = await prisma.estimate.findMany({
+      where,
+      include: {
+        project: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+    
+    res.json(estimates)
+  } catch (error) {
+    console.error('Error fetching estimates:', error)
+    res.status(500).json({ error: 'Failed to fetch estimates' })
+  }
 })
 
 // Get estimate by ID
 router.get('/estimates/:id', async (req, res) => {
-  const { id } = req.params
-  // In production, fetch from database
-  res.json({ id, items: [], createdAt: new Date().toISOString() })
+  try {
+    const { id } = req.params
+    
+    const estimate = await prisma.estimate.findUnique({
+      where: { id },
+      include: {
+        project: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    })
+    
+    if (!estimate) {
+      return res.status(404).json({ error: 'Estimate not found' })
+    }
+    
+    res.json(estimate)
+  } catch (error) {
+    console.error('Error fetching estimate:', error)
+    res.status(500).json({ error: 'Failed to fetch estimate' })
+  }
+})
+
+// Update estimate
+router.put('/estimates/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, description, items, subtotal, overhead, profit, total, options, projectId } = req.body
+    
+    const existingEstimate = await prisma.estimate.findUnique({ where: { id } })
+    if (!existingEstimate) {
+      return res.status(404).json({ error: 'Estimate not found' })
+    }
+    
+    const estimate = await prisma.estimate.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        items,
+        subtotal,
+        overhead,
+        profit,
+        total,
+        options,
+        projectId,
+      },
+    })
+    
+    res.json(estimate)
+  } catch (error) {
+    console.error('Error updating estimate:', error)
+    res.status(500).json({ error: 'Failed to update estimate' })
+  }
+})
+
+// Delete estimate
+router.delete('/estimates/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const existingEstimate = await prisma.estimate.findUnique({ where: { id } })
+    if (!existingEstimate) {
+      return res.status(404).json({ error: 'Estimate not found' })
+    }
+    
+    await prisma.estimate.delete({ where: { id } })
+    res.status(204).send()
+  } catch (error) {
+    console.error('Error deleting estimate:', error)
+    res.status(500).json({ error: 'Failed to delete estimate' })
+  }
+})
+
+// Get normatives from database
+router.get('/normatives', async (req, res) => {
+  try {
+    const { type, category, search } = req.query
+    
+    const where: { type?: string; category?: string; OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; code?: { contains: string; mode: 'insensitive' } }> } = {}
+    if (type) where.type = String(type)
+    if (category) where.category = String(category)
+    if (search) {
+      where.OR = [
+        { name: { contains: String(search), mode: 'insensitive' } },
+        { code: { contains: String(search), mode: 'insensitive' } },
+      ]
+    }
+    
+    const normatives = await prisma.normative.findMany({
+      where,
+      orderBy: { code: 'asc' },
+    })
+    
+    res.json(normatives)
+  } catch (error) {
+    console.error('Error fetching normatives:', error)
+    res.status(500).json({ error: 'Failed to fetch normatives' })
+  }
+})
+
+// Get materials from database
+router.get('/materials', async (req, res) => {
+  try {
+    const { category, search } = req.query
+    
+    const where: { category?: string; OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; code?: { contains: string; mode: 'insensitive' } }> } = {}
+    if (category) where.category = String(category)
+    if (search) {
+      where.OR = [
+        { name: { contains: String(search), mode: 'insensitive' } },
+        { code: { contains: String(search), mode: 'insensitive' } },
+      ]
+    }
+    
+    const materials = await prisma.material.findMany({
+      where,
+      orderBy: { code: 'asc' },
+    })
+    
+    res.json(materials)
+  } catch (error) {
+    console.error('Error fetching materials:', error)
+    res.status(500).json({ error: 'Failed to fetch materials' })
+  }
 })
 
 export default router
