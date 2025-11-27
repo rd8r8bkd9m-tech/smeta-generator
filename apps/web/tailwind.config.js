@@ -4,6 +4,8 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  // Dark mode uses 'class' strategy - add 'dark' class to root element (html or wrapper div)
+  // Theme switching is managed by the useStore hook which persists the preference
   darkMode: 'class',
   theme: {
     extend: {

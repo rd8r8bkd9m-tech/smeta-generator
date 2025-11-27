@@ -69,12 +69,14 @@ export function AnimatedNumber({
     }
   }, [value, animate, animateValue])
 
-  // Initial animation on mount
+  // Initial animation on mount - intentionally runs only once
   useEffect(() => {
     if (animate && prevValueRef.current === value) {
       animateValue(0, value)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // Note: This effect intentionally runs only on mount to trigger initial animation
+    // Adding dependencies would cause unwanted re-runs
+  }, [animate, animateValue, value])
 
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat('ru-RU', {

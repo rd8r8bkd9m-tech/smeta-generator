@@ -30,6 +30,12 @@ export default function RegisterPage() {
     return strength
   })()
 
+  const getPasswordStrengthColor = (strength: number): string => {
+    if (strength <= 2) return 'bg-rose-500'
+    if (strength <= 3) return 'bg-amber-500'
+    return 'bg-emerald-500'
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -188,7 +194,7 @@ export default function RegisterPage() {
                           className={clsx(
                             'h-1 flex-1 rounded-full transition-colors',
                             level <= passwordStrength
-                              ? passwordStrength <= 2 ? 'bg-rose-500' : passwordStrength <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
+                              ? getPasswordStrengthColor(passwordStrength)
                               : 'bg-secondary-200 dark:bg-secondary-700'
                           )}
                         />

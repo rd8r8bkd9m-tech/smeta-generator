@@ -28,9 +28,16 @@ export function Skeleton({
     none: 'bg-gray-200 dark:bg-gray-700',
   }
 
+  const getHeight = (): string | number | undefined => {
+    if (typeof height === 'number') return `${height}px`
+    if (height) return height
+    if (variant === 'text') return '1em'
+    return undefined
+  }
+
   const style: React.CSSProperties = {
     width: typeof width === 'number' ? `${width}px` : width,
-    height: typeof height === 'number' ? `${height}px` : height || (variant === 'text' ? '1em' : undefined),
+    height: getHeight(),
   }
 
   return (

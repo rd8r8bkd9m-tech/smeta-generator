@@ -54,7 +54,9 @@ export function ProgressRing({
     }
 
     requestAnimationFrame(animate)
-  }, [value, animated]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Note: displayValue is intentionally excluded to prevent animation restart on every value change
+    // The animation should only restart when target value or animated prop changes
+  }, [value, animated])
 
   return (
     <div className={clsx('relative inline-flex items-center justify-center', className)}>
