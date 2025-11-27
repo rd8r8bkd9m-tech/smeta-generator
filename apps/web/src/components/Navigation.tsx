@@ -30,6 +30,7 @@ export default function Navigation({ currentView, onViewChange }: NavigationProp
           <button
             onClick={() => handleViewChange('home')}
             className="flex items-center space-x-2"
+            aria-label="SMETA PRO - Перейти на главную"
           >
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
               <Calculator className="w-5 h-5 text-white" />
@@ -59,6 +60,9 @@ export default function Navigation({ currentView, onViewChange }: NavigationProp
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-secondary-600 hover:bg-secondary-100 rounded-lg"
+              aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -71,7 +75,7 @@ export default function Navigation({ currentView, onViewChange }: NavigationProp
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden pb-4 space-y-2">
+          <div id="mobile-menu" className="md:hidden pb-4 space-y-2">
             {navItems.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}

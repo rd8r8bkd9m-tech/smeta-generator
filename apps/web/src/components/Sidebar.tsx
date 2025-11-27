@@ -1,3 +1,16 @@
+/**
+ * Sidebar component for alternative navigation layout.
+ * This component provides a vertical sidebar navigation option that can be used
+ * instead of or alongside the top Navigation component for a different UX.
+ * 
+ * Usage example in App.tsx:
+ * ```tsx
+ * <div className="flex">
+ *   <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+ *   <main className="flex-1">...</main>
+ * </div>
+ * ```
+ */
 import { Calculator, Home, FolderOpen, Users } from 'lucide-react'
 import clsx from 'clsx'
 import type { View } from '../App'

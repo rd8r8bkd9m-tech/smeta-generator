@@ -1,8 +1,9 @@
 import { ReactNode, useEffect, useState } from 'react'
+import type { View } from '../App'
 
 interface ViewTransitionProps {
   children: ReactNode
-  view: string
+  view: View
 }
 
 export default function ViewTransition({ children, view }: ViewTransitionProps) {
