@@ -1,7 +1,5 @@
-/// <reference lib="webworker" />
 /* eslint-disable no-restricted-globals */
-
-declare const self: ServiceWorkerGlobalScope
+/* Service Worker for SMETA PRO PWA */
 
 const CACHE_NAME = 'smeta-pro-v1'
 const STATIC_ASSETS = [
@@ -106,15 +104,21 @@ self.addEventListener('fetch', (event) => {
 })
 
 // Background sync for offline data
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', function(event) {
   if (event.tag === 'sync-estimates') {
     event.waitUntil(syncEstimates())
   }
 })
 
 async function syncEstimates() {
-  // Get pending estimates from IndexedDB and sync with server
-  console.log('Service Worker: Syncing estimates')
+  // Sync pending offline estimates with the server
+  // This will be called when the device comes back online
+  try {
+    // Future implementation: Read from IndexedDB and POST to server
+    console.log('Service Worker: Background sync triggered for estimates')
+  } catch (error) {
+    console.error('Service Worker: Sync failed', error)
+  }
 }
 
 // Push notifications
