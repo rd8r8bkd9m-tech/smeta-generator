@@ -1,13 +1,13 @@
-import { Router } from 'express'
+import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import jwt, { type SignOptions } from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
 
-const router = Router()
+const router: RouterType = Router()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+const JWT_EXPIRES_IN = '7d'
 
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
@@ -21,7 +21,7 @@ const authLimiter = rateLimit({
 // Validation schemas
 const RegisterSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(8),
   name: z.string().min(2),
 })
 
@@ -34,11 +34,12 @@ const LoginSchema = z.object({
 const users: Record<string, { id: string; email: string; name: string; password: string }> = {}
 
 // Helper to generate JWT
-function generateToken(user: { id: string; email: string; name: string }) {
+function generateToken(user: { id: string; email: string; name: string }): string {
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN }
   return jwt.sign(
     { id: user.id, email: user.email, name: user.name },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    options
   )
 }
 

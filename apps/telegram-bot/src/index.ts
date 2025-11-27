@@ -1,11 +1,9 @@
 import { Telegraf, Context, Markup } from 'telegraf'
 import dotenv from 'dotenv'
-import axios from 'axios'
 
 dotenv.config()
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const API_URL = process.env.API_URL || 'http://localhost:4000/api'
 
 if (!BOT_TOKEN) {
   console.error('❌ TELEGRAM_BOT_TOKEN is not set')
