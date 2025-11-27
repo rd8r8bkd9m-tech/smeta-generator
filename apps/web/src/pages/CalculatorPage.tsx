@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react'
-import { Search, Plus, Download, Save } from 'lucide-react'
+import { Search, Plus, Download, Save, Sparkles, Package, Hammer, Filter } from 'lucide-react'
 import EstimateTable from '../components/EstimateTable'
 import { useStore } from '../store/useStore'
+import { GlassCard, Badge } from '../design-system/components'
+import clsx from 'clsx'
 
 interface EstimateItem {
   id: string
@@ -14,26 +16,31 @@ interface EstimateItem {
 
 // Примеры работ и материалов
 const catalogItems = [
-  { id: 'work-1', name: 'Демонтаж перегородок кирпичных', unit: 'м³', price: 1250 },
-  { id: 'work-2', name: 'Кладка перегородок из кирпича', unit: 'м³', price: 4500 },
-  { id: 'work-3', name: 'Штукатурка стен', unit: 'м²', price: 450 },
-  { id: 'work-4', name: 'Шпаклевка стен', unit: 'м²', price: 280 },
-  { id: 'work-5', name: 'Покраска стен', unit: 'м²', price: 180 },
-  { id: 'mat-1', name: 'Кирпич керамический М150', unit: 'шт', price: 12 },
-  { id: 'mat-2', name: 'Цемент М500', unit: 'кг', price: 8 },
-  { id: 'mat-3', name: 'Песок строительный', unit: 'м³', price: 1200 },
-  { id: 'mat-4', name: 'Штукатурка гипсовая', unit: 'кг', price: 15 },
-  { id: 'mat-5', name: 'Краска водоэмульсионная', unit: 'л', price: 350 },
+  { id: 'work-1', name: 'Демонтаж перегородок кирпичных', unit: 'м³', price: 1250, type: 'work' },
+  { id: 'work-2', name: 'Кладка перегородок из кирпича', unit: 'м³', price: 4500, type: 'work' },
+  { id: 'work-3', name: 'Штукатурка стен', unit: 'м²', price: 450, type: 'work' },
+  { id: 'work-4', name: 'Шпаклевка стен', unit: 'м²', price: 280, type: 'work' },
+  { id: 'work-5', name: 'Покраска стен', unit: 'м²', price: 180, type: 'work' },
+  { id: 'mat-1', name: 'Кирпич керамический М150', unit: 'шт', price: 12, type: 'material' },
+  { id: 'mat-2', name: 'Цемент М500', unit: 'кг', price: 8, type: 'material' },
+  { id: 'mat-3', name: 'Песок строительный', unit: 'м³', price: 1200, type: 'material' },
+  { id: 'mat-4', name: 'Штукатурка гипсовая', unit: 'кг', price: 15, type: 'material' },
+  { id: 'mat-5', name: 'Краска водоэмульсионная', unit: 'л', price: 350, type: 'material' },
 ]
+
+type FilterType = 'all' | 'work' | 'material'
 
 export default function CalculatorPage() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState<FilterType>('all')
   const [estimateItems, setEstimateItems] = useState<EstimateItem[]>([])
   const { addNotification } = useStore()
 
-  const filteredCatalog = catalogItems.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredCatalog = catalogItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesType = filterType === 'all' || item.type === filterType
+    return matchesSearch && matchesType
+  })
 
   const addToEstimate = useCallback((catalogItem: typeof catalogItems[0]) => {
     const existingItem = estimateItems.find(item => item.id === catalogItem.id)
@@ -82,19 +89,40 @@ export default function CalculatorPage() {
     addNotification?.('info', 'Экспорт в Excel...')
   }
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ru-RU').format(price)
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-secondary-900">Калькулятор сметы</h1>
-          <p className="text-secondary-600">Создайте новую смету или выберите из шаблонов</p>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">
+              Калькулятор сметы
+            </h1>
+            <Badge variant="gradient" size="sm">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Pro
+            </Badge>
+          </div>
+          <p className="text-secondary-600 dark:text-secondary-400">
+            Создайте новую смету или выберите из шаблонов
+          </p>
         </div>
-        <div className="flex space-x-2">
-          <button onClick={handleSave} className="btn btn-secondary flex items-center space-x-2">
+        <div className="flex gap-3">
+          <button 
+            onClick={handleSave} 
+            className="btn btn-secondary flex items-center gap-2"
+          >
             <Save className="w-4 h-4" />
             <span>Сохранить</span>
           </button>
-          <button onClick={handleExport} className="btn btn-primary flex items-center space-x-2">
+          <button 
+            onClick={handleExport} 
+            className="btn btn-primary flex items-center gap-2"
+          >
             <Download className="w-4 h-4" />
             <span>Экспорт</span>
           </button>
@@ -103,44 +131,109 @@ export default function CalculatorPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Каталог */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-secondary-900 mb-4">Каталог работ и материалов</h2>
-          
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
-            <input
-              type="text"
-              placeholder="Поиск..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input pl-10"
-            />
+        <GlassCard className="p-0 overflow-hidden">
+          <div className="p-6 border-b border-secondary-100 dark:border-secondary-700/50">
+            <h2 className="text-lg font-semibold text-secondary-900 dark:text-white mb-4">
+              Каталог работ и материалов
+            </h2>
+            
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary-400" />
+              <input
+                type="text"
+                placeholder="Поиск позиций..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input pl-10"
+              />
+            </div>
+
+            {/* Filter chips */}
+            <div className="flex gap-2">
+              {[
+                { key: 'all', label: 'Все', icon: Filter },
+                { key: 'work', label: 'Работы', icon: Hammer },
+                { key: 'material', label: 'Материалы', icon: Package },
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilterType(key as FilterType)}
+                  className={clsx(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                    filterType === key
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                      : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-600 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-700'
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {filteredCatalog.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3 bg-secondary-50 rounded-lg hover:bg-secondary-100 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-secondary-900 truncate">
-                    {item.name}
-                  </div>
-                  <div className="text-xs text-secondary-500">
-                    {item.price} ₽ / {item.unit}
-                  </div>
-                </div>
-                <button
-                  onClick={() => addToEstimate(item)}
-                  className="ml-2 p-2 text-primary-600 hover:bg-primary-100 rounded-lg"
+          <div className="p-4 max-h-[500px] overflow-y-auto scrollbar-thin">
+            <div className="space-y-2">
+              {filteredCatalog.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={clsx(
+                    'group flex items-center justify-between p-3 rounded-xl',
+                    'bg-secondary-50 dark:bg-secondary-800/50',
+                    'hover:bg-secondary-100 dark:hover:bg-secondary-800',
+                    'border border-transparent hover:border-secondary-200 dark:hover:border-secondary-700',
+                    'transition-all duration-200 cursor-pointer',
+                    'stagger-item'
+                  )}
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
-                  <Plus className="w-4 h-4" />
-                </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {item.type === 'work' ? (
+                        <Hammer className="w-3.5 h-3.5 text-blue-500" />
+                      ) : (
+                        <Package className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                      <span className="text-sm font-medium text-secondary-900 dark:text-white truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-xs text-secondary-500 dark:text-secondary-400">
+                      <span className="font-medium text-primary-600 dark:text-primary-400">
+                        {formatPrice(item.price)} ₽
+                      </span>
+                      <span className="mx-1">/</span>
+                      <span>{item.unit}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => addToEstimate(item)}
+                    className={clsx(
+                      'ml-3 p-2 rounded-lg',
+                      'text-primary-600 dark:text-primary-400',
+                      'hover:bg-primary-100 dark:hover:bg-primary-900/30',
+                      'transition-all duration-200',
+                      'group-hover:scale-110'
+                    )}
+                    aria-label={`Добавить ${item.name}`}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {filteredCatalog.length === 0 && (
+              <div className="text-center py-8">
+                <Search className="w-10 h-10 text-secondary-300 dark:text-secondary-600 mx-auto mb-3" />
+                <p className="text-secondary-500 dark:text-secondary-400">
+                  Ничего не найдено
+                </p>
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        </GlassCard>
 
         {/* Смета */}
         <div className="lg:col-span-2">

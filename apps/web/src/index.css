@@ -1,9 +1,15 @@
+/* Design System Tokens */
+@import './design-system/tokens/colors.css';
+@import './design-system/tokens/typography.css';
+@import './design-system/tokens/spacing.css';
+@import './design-system/tokens/animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-primary, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif);
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light dark;
@@ -17,30 +23,187 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* Smooth scrolling with reduced motion support */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer base {
+  /* Focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid #f97316;
+    outline-offset: 2px;
+  }
+
+  /* Selection colors */
+  ::selection {
+    background: rgba(249, 115, 22, 0.3);
+    color: inherit;
+  }
+}
+
 @layer components {
+  /* Premium Button Styles */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ease-out;
+    @apply focus:outline-none focus:ring-4 focus:ring-primary-500/30;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply active:scale-[0.98];
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 bg-[length:200%_100%];
+    @apply text-white shadow-lg shadow-primary-500/25;
+    @apply hover:bg-[position:100%_0] hover:shadow-xl hover:shadow-primary-500/30;
+    @apply hover:-translate-y-0.5;
   }
   
   .btn-secondary {
-    @apply bg-secondary-200 text-secondary-800 hover:bg-secondary-300;
+    @apply bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200;
+    @apply border border-secondary-200 dark:border-secondary-700;
+    @apply hover:bg-secondary-50 dark:hover:bg-secondary-700;
+    @apply hover:border-secondary-300 dark:hover:border-secondary-600;
+    @apply shadow-sm hover:shadow-md;
+  }
+
+  .btn-ghost {
+    @apply text-secondary-600 dark:text-secondary-400;
+    @apply hover:bg-secondary-100 dark:hover:bg-secondary-800;
+    @apply hover:text-secondary-900 dark:hover:text-secondary-100;
   }
   
+  /* Premium Input Styles */
   .input {
-    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-secondary-800/80;
+    @apply border border-secondary-200 dark:border-secondary-700;
+    @apply text-secondary-900 dark:text-secondary-100;
+    @apply placeholder:text-secondary-400 dark:placeholder:text-secondary-500;
+    @apply focus:outline-none focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500;
+    @apply transition-all duration-200;
+    @apply backdrop-blur-sm;
+  }
+
+  .input:hover {
+    @apply border-secondary-300 dark:border-secondary-600;
   }
   
+  /* Premium Card Styles */
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6;
+    @apply bg-white dark:bg-secondary-800 rounded-2xl;
+    @apply shadow-sm hover:shadow-md;
+    @apply border border-secondary-100 dark:border-secondary-700/50;
+    @apply p-6 transition-all duration-200;
+  }
+
+  .card-glass {
+    @apply bg-white/70 dark:bg-secondary-800/70;
+    @apply backdrop-blur-xl backdrop-saturate-150;
+    @apply border border-white/20 dark:border-secondary-700/50;
+    @apply shadow-glass rounded-2xl p-6;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500;
+    @apply bg-clip-text text-transparent;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-white/70 dark:bg-secondary-800/70;
+    @apply backdrop-blur-xl backdrop-saturate-150;
+    @apply border border-white/20 dark:border-secondary-700/50;
+  }
+
+  /* Gradient borders */
+  .gradient-border {
+    @apply relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-2xl p-[1px] -z-10;
+    background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FDB833 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full animate-pulse;
+  }
+
+  .status-dot-success {
+    @apply bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)];
+  }
+
+  .status-dot-warning {
+    @apply bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)];
+  }
+
+  .status-dot-error {
+    @apply bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)];
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.secondary.300') transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: theme('colors.secondary.300');
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.secondary.400');
+  }
+
+  /* Truncate multiline */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
