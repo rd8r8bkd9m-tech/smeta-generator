@@ -102,17 +102,21 @@ router.get('/templates', async (_req, res) => {
 
 // Save estimate
 router.post('/estimates', async (req, res) => {
-  const estimate = req.body
-  
-  // In production, save to database
-  const savedEstimate = {
-    id: `EST-${Date.now().toString(36).toUpperCase()}`,
-    ...estimate,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+  try {
+    const estimate = req.body
+    
+    // In production, save to database
+    const savedEstimate = {
+      id: `EST-${Date.now().toString(36).toUpperCase()}`,
+      ...estimate,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    res.status(201).json(savedEstimate)
+  } catch (error) {
+    throw error
   }
-  
-  res.status(201).json(savedEstimate)
 })
 
 // Get estimates
