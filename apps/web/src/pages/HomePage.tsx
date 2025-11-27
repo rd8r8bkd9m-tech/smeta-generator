@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import { Calculator, FolderOpen, Users, TrendingUp, FileText, Shield } from 'lucide-react'
+import type { View } from '../App'
 
 const features = [
   {
@@ -34,7 +34,11 @@ const features = [
   },
 ]
 
-export default function HomePage() {
+interface HomePageProps {
+  onNavigate: (view: View) => void
+}
+
+export default function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
@@ -47,12 +51,12 @@ export default function HomePage() {
           Быстро, точно, удобно.
         </p>
         <div className="flex justify-center space-x-4">
-          <Link to="/calculator" className="btn btn-primary text-lg px-8 py-3">
+          <button onClick={() => onNavigate('calculator')} className="btn btn-primary text-lg px-8 py-3">
             Начать расчет
-          </Link>
-          <Link to="/projects" className="btn btn-secondary text-lg px-8 py-3">
+          </button>
+          <button onClick={() => onNavigate('projects')} className="btn btn-secondary text-lg px-8 py-3">
             Мои проекты
-          </Link>
+          </button>
         </div>
       </section>
 
