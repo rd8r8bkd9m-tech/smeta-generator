@@ -9,6 +9,7 @@ import calculatorRoutes from './routes/calculator.js'
 import projectsRoutes from './routes/projects.js'
 import clientsRoutes from './routes/clients.js'
 import authRoutes from './routes/auth.js'
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 
 dotenv.config()
 
@@ -36,19 +37,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err.stack)
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  })
-})
-
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Not Found' })
-})
+// Error handlers
+app.use(errorHandler)
+app.use(notFoundHandler)
 
 app.listen(PORT, () => {
   console.log(`🚀 API Server running on http://localhost:${PORT}`)

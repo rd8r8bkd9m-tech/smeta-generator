@@ -6,6 +6,12 @@ export interface AppError extends Error {
   code?: string
 }
 
+// Prisma error codes
+const PRISMA_ERROR_CODES = {
+  UNIQUE_CONSTRAINT: 'P2002',
+  RECORD_NOT_FOUND: 'P2025',
+} as const
+
 export function createError(message: string, statusCode: number, code?: string): AppError {
   const error: AppError = new Error(message)
   error.statusCode = statusCode
@@ -53,7 +59,7 @@ export function errorHandler(
   }
 
   // Handle Prisma errors
-  if (err.code === 'P2002') {
+  if (err.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT) {
     res.status(409).json({
       error: 'Conflict',
       message: 'A record with this value already exists',
@@ -62,7 +68,7 @@ export function errorHandler(
     return
   }
 
-  if (err.code === 'P2025') {
+  if (err.code === PRISMA_ERROR_CODES.RECORD_NOT_FOUND) {
     res.status(404).json({
       error: 'Not Found',
       message: 'The requested record was not found',

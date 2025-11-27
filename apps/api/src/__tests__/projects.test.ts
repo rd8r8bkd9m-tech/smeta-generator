@@ -23,6 +23,11 @@ interface ProjectStore {
 
 let projectCounter = 0
 
+// Helper to generate unique project IDs (mirrors the pattern used in routes)
+function generateProjectId(counter: number): string {
+  return `PRJ-${Date.now().toString(36).toUpperCase()}-${counter}`
+}
+
 function createProjectStore(): ProjectStore {
   const projects = new Map<string, Project>()
 
@@ -32,7 +37,7 @@ function createProjectStore(): ProjectStore {
     create(data) {
       projectCounter++
       const project: Project = {
-        id: `PRJ-${Date.now().toString(36).toUpperCase()}-${projectCounter}`,
+        id: generateProjectId(projectCounter),
         name: data.name,
         description: data.description,
         status: data.status || 'draft',

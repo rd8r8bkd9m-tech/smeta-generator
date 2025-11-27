@@ -3,6 +3,13 @@ import { ZodSchema, z } from 'zod'
 
 type ValidationTarget = 'body' | 'query' | 'params'
 
+// Validation pattern constants
+const VALIDATION_PATTERNS = {
+  PHONE: /^\+?[0-9\s\-()]+$/,
+  INN: /^\d{10,12}$/,
+  KPP: /^\d{9}$/,
+} as const
+
 export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -61,13 +68,13 @@ export const NameSchema = z.string()
   .max(255, 'Name must be at most 255 characters')
 
 export const PhoneSchema = z.string()
-  .regex(/^\+?[0-9\s\-()]+$/, 'Invalid phone number format')
+  .regex(VALIDATION_PATTERNS.PHONE, 'Invalid phone number format')
   .optional()
 
 export const INNSchema = z.string()
-  .regex(/^\d{10,12}$/, 'INN must be 10-12 digits')
+  .regex(VALIDATION_PATTERNS.INN, 'INN must be 10-12 digits')
   .optional()
 
 export const KPPSchema = z.string()
-  .regex(/^\d{9}$/, 'KPP must be 9 digits')
+  .regex(VALIDATION_PATTERNS.KPP, 'KPP must be 9 digits')
   .optional()
