@@ -10,6 +10,7 @@ import projectsRoutes from './routes/projects.js'
 import clientsRoutes from './routes/clients.js'
 import authRoutes from './routes/auth.js'
 import exportRoutes from './routes/export.js'
+import aiRoutes from './routes/ai.js'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 
 dotenv.config()
@@ -33,6 +34,7 @@ app.use('/api/projects', projectsRoutes)
 app.use('/api/clients', clientsRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/export', exportRoutes)
+app.use('/api/ai', aiRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -1,0 +1,12 @@
+[package]
+name = "denidom-parser"
+version.workspace = true
+edition.workspace = true
+description = "Parser for FER, GESN, TER normative databases"
+
+[dependencies]
+denidom-core = { path = "../denidom-core" }
+calamine.workspace = true
+quick-xml.workspace = true
+serde.workspace = true
+thiserror.workspace = true

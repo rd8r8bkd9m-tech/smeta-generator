@@ -68,7 +68,7 @@ export default function LoginPage() {
             <h2 className="mt-6 text-3xl font-extrabold text-secondary-900 dark:text-white">
               Вход в{' '}
               <span className="bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent">
-                SMETA PRO
+                ДениДом
               </span>
             </h2>
             <p className="mt-2 text-sm text-secondary-600 dark:text-secondary-400">

@@ -17,9 +17,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects  Project[]
-  clients   Client[]
-  estimates Estimate[]
+  projects       Project[]
+  clients        Client[]
+  estimates      Estimate[]
+  customPrices   CustomPrice[]
+  priceTemplates PriceTemplate[]
 
   @@map("users")
 }
@@ -67,17 +69,18 @@ model Project {
 }
 
 model Estimate {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   description String?
+  type        EstimateType @default(COMMERCIAL)
   items       Json
-  subtotal    Float    @default(0)
-  overhead    Float    @default(0)
-  profit      Float    @default(0)
-  total       Float    @default(0)
+  subtotal    Float        @default(0)
+  overhead    Float        @default(0)
+  profit      Float        @default(0)
+  total       Float        @default(0)
   options     Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -104,6 +107,9 @@ model Normative {
   validTo     DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  commercialPrices CommercialPrice[]
+  customPrices     CustomPrice[]
 
   @@map("normatives")
 }
@@ -148,4 +154,77 @@ enum NormativeType {
   GESN
   TER
   TSN
+}
+
+enum EstimateType {
+  FER
+  COMMERCIAL
+  MIXED
+}
+
+// Коммерческие цены (базовые рыночные)
+model CommercialPrice {
+  id            String     @id @default(cuid())
+  normativeId   String?
+  normative     Normative? @relation(fields: [normativeId], references: [id])
+  code          String?
+  name          String
+  unit          String
+  category      String?
+  price         Float
+  minPrice      Float?
+  maxPrice      Float?
+  costPrice     Float?
+  marginPercent Float?
+  region        String?
+  source        String?
+  notes         String?
+  isActive      Boolean    @default(true)
+  validFrom     DateTime   @default(now())
+  validTo       DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([normativeId, region])
+  @@index([category])
+  @@map("commercial_prices")
+}
+
+// Пользовательские цены (кастомные)
+model CustomPrice {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  normativeId String?
+  normative   Normative? @relation(fields: [normativeId], references: [id])
+  code        String?
+  name        String
+  unit        String
+  category    String?
+  price       Float
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([userId, normativeId])
+  @@unique([userId, code])
+  @@map("custom_prices")
+}
+
+// Шаблоны ценообразования
+model PriceTemplate {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  description        String?
+  laborMultiplier    Float    @default(1.0)
+  materialMultiplier Float    @default(1.0)
+  overheadPercent    Float    @default(0.12)
+  profitPercent      Float    @default(0.08)
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("price_templates")
 }

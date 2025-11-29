@@ -28,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="container mx-auto px-4 text-center text-secondary-500 dark:text-secondary-400 text-sm">
             <p className="flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-gradient-to-r from-primary-500 to-amber-500 animate-pulse"></span>
-              © 2024 SMETA PRO. Все права защищены.
+              © 2024 ДениДом. Все права защищены.
             </p>
           </div>
         </footer>

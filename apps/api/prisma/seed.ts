@@ -9,10 +9,10 @@ async function main() {
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10)
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@smeta-pro.ru' },
+    where: { email: 'admin@denidom.ru' },
     update: {},
     create: {
-      email: 'admin@smeta-pro.ru',
+      email: 'admin@denidom.ru',
       name: 'Администратор',
       password: adminPassword,
       role: 'ADMIN',
@@ -23,10 +23,10 @@ async function main() {
   // Create test user
   const userPassword = await bcrypt.hash('user123', 10)
   const user = await prisma.user.upsert({
-    where: { email: 'user@smeta-pro.ru' },
+    where: { email: 'user@denidom.ru' },
     update: {},
     create: {
-      email: 'user@smeta-pro.ru',
+      email: 'user@denidom.ru',
       name: 'Тестовый пользователь',
       password: userPassword,
       role: 'USER',
@@ -80,6 +80,7 @@ async function main() {
     data: {
       name: 'Смета на отделочные работы',
       description: 'Штукатурка, шпаклевка, покраска стен',
+      type: 'COMMERCIAL',
       items: [
         { id: 'work-1', name: 'Штукатурка стен', unit: 'м²', quantity: 300, price: 450 },
         { id: 'work-2', name: 'Шпаклевка стен', unit: 'м²', quantity: 300, price: 280 },
@@ -101,7 +102,7 @@ async function main() {
   })
   console.log('✅ Created estimate:', estimate.name)
 
-  // Create sample normatives
+  // Create sample normatives with extended data for AI matching
   const normatives = [
     {
       code: 'ФЕР11-01-001-01',
@@ -110,6 +111,7 @@ async function main() {
       price: 4500,
       type: 'FER' as const,
       category: 'Кладка',
+      description: 'Кладка перегородок из керамического кирпича толщиной в полкирпича',
     },
     {
       code: 'ФЕР15-02-001-01',
@@ -118,6 +120,7 @@ async function main() {
       price: 450,
       type: 'FER' as const,
       category: 'Отделка',
+      description: 'Оштукатуривание поверхностей цементным раствором',
     },
     {
       code: 'ФЕР15-02-002-01',
@@ -126,6 +129,7 @@ async function main() {
       price: 280,
       type: 'FER' as const,
       category: 'Отделка',
+      description: 'Шпаклевка поверхностей под покраску',
     },
     {
       code: 'ФЕР15-04-001-01',
@@ -134,6 +138,7 @@ async function main() {
       price: 180,
       type: 'FER' as const,
       category: 'Отделка',
+      description: 'Окраска поверхностей водоэмульсионными составами за 2 раза',
     },
     {
       code: 'ФЕР11-01-002-01',
@@ -142,17 +147,120 @@ async function main() {
       price: 1250,
       type: 'FER' as const,
       category: 'Демонтаж',
+      description: 'Разборка кирпичных перегородок',
+    },
+    {
+      code: 'ФЕР15-01-002-01',
+      name: 'Штукатурка улучшенная по камню и бетону',
+      unit: '100 м²',
+      price: 12340,
+      type: 'FER' as const,
+      category: 'Отделка',
+      description: 'Улучшенная штукатурка по камню и бетону стен',
+    },
+    {
+      code: 'ФЕР15-04-002-01',
+      name: 'Окраска улучшенная поливинилацетатными водоэмульсионными',
+      unit: '100 м²',
+      price: 4890,
+      type: 'FER' as const,
+      category: 'Отделка',
+      description: 'Окраска улучшенная поливинилацетатными водоэмульсионными составами',
+    },
+    {
+      code: 'ФЕР11-02-001-01',
+      name: 'Укладка ламината',
+      unit: '100 м²',
+      price: 5670,
+      type: 'FER' as const,
+      category: 'Полы',
+      description: 'Устройство покрытий из ламинированных паркетных досок',
+    },
+    {
+      code: 'ФЕР11-03-001-01',
+      name: 'Укладка керамической плитки на пол',
+      unit: 'м²',
+      price: 650,
+      type: 'FER' as const,
+      category: 'Плиточные работы',
+      description: 'Облицовка пола керамической плиткой',
+    },
+    {
+      code: 'ФЕР11-03-002-01',
+      name: 'Облицовка стен керамической плиткой',
+      unit: 'м²',
+      price: 750,
+      type: 'FER' as const,
+      category: 'Плиточные работы',
+      description: 'Облицовка стен керамическими плитками',
     },
   ]
 
+  const createdNormatives = []
   for (const normative of normatives) {
-    await prisma.normative.upsert({
+    const created = await prisma.normative.upsert({
       where: { code: normative.code },
       update: {},
       create: normative,
     })
+    createdNormatives.push(created)
   }
   console.log('✅ Created normatives:', normatives.length)
+
+  // Create commercial prices for normatives (market prices with markup)
+  const commercialPriceMultipliers: Record<string, number> = {
+    'ФЕР11-01-001-01': 1.8,
+    'ФЕР15-02-001-01': 1.67,
+    'ФЕР15-02-002-01': 1.75,
+    'ФЕР15-04-001-01': 1.72,
+    'ФЕР11-01-002-01': 1.6,
+    'ФЕР15-01-002-01': 1.5,
+    'ФЕР15-04-002-01': 1.53,
+    'ФЕР11-02-001-01': 1.5,
+    'ФЕР11-03-001-01': 1.85,
+    'ФЕР11-03-002-01': 1.87,
+  }
+
+  for (const normative of createdNormatives) {
+    const multiplier = commercialPriceMultipliers[normative.code] || 1.5
+    const commercialPrice = Math.round(normative.price * multiplier)
+    const minPrice = Math.round(commercialPrice * 0.85)
+    const maxPrice = Math.round(commercialPrice * 1.15)
+    const costPrice = Math.round(normative.price * 1.1)
+    const marginPercent = Math.round((multiplier - 1) * 100)
+
+    await prisma.commercialPrice.upsert({
+      where: {
+        normativeId_region: {
+          normativeId: normative.id,
+          region: 'Москва',
+        },
+      },
+      update: {
+        price: commercialPrice,
+        minPrice,
+        maxPrice,
+        costPrice,
+        marginPercent,
+      },
+      create: {
+        normativeId: normative.id,
+        code: normative.code,
+        name: normative.name,
+        unit: normative.unit,
+        category: normative.category,
+        price: commercialPrice,
+        minPrice,
+        maxPrice,
+        costPrice,
+        marginPercent,
+        region: 'Москва',
+        source: 'Рыночный анализ 2024',
+        isActive: true,
+      },
+    })
+  }
+  console.log('✅ Created commercial prices:', createdNormatives.length)
 
   // Create sample materials
   const materials = [
@@ -171,6 +279,26 @@ async function main() {
     })
   }
   console.log('✅ Created materials:', materials.length)
+
+  // Create sample price template for the test user
+  await prisma.priceTemplate.upsert({
+    where: {
+      id: 'default-template',
+    },
+    update: {},
+    create: {
+      id: 'default-template',
+      userId: user.id,
+      name: 'Стандартный шаблон',
+      description: 'Стандартные коэффициенты для типовых проектов',
+      laborMultiplier: 1.0,
+      materialMultiplier: 1.0,
+      overheadPercent: 0.12,
+      profitPercent: 0.08,
+      isDefault: true,
+    },
+  })
+  console.log('✅ Created price template')
 
   console.log('🎉 Database seeding completed!')
 }

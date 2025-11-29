@@ -23,7 +23,7 @@ bot.command('start', async (ctx: Context) => {
   ]).resize()
 
   await ctx.reply(
-    '👋 Добро пожаловать в SMETA PRO Bot!\n\n' +
+    '👋 Добро пожаловать в ДениДом Bot!\n\n' +
     'Я помогу вам быстро рассчитать стоимость строительных работ.\n\n' +
     'Выберите действие:',
     keyboard
@@ -45,7 +45,7 @@ bot.command('help', async (ctx: Context) => {
     '2. Выберите работы из каталога\n' +
     '3. Укажите количество\n' +
     '4. Получите готовую смету\n\n' +
-    '*Поддержка:* support@smeta-pro.ru',
+    '*Поддержка:* support@denidom.ru',
     { parse_mode: 'Markdown' }
   )
 })
@@ -181,7 +181,7 @@ bot.catch((err, ctx) => {
 })
 
 // Start bot
-console.log('🤖 Starting SMETA PRO Telegram Bot...')
+console.log('🤖 Starting ДениДом Telegram Bot...')
 bot.launch()
 
 // Enable graceful stop

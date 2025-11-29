@@ -1,20 +1,9 @@
 import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
+import type { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma.js'
 
 const router: RouterType = Router()
-
-// Shared search filter type
-interface SearchFilter {
-  contains: string
-  mode: 'insensitive'
-}
-
-interface SearchWhereClause {
-  type?: string
-  category?: string
-  OR?: Array<{ name?: SearchFilter; code?: SearchFilter }>
-}
 
 // Validation schemas
 const CalculateItemSchema = z.object({
@@ -250,8 +239,10 @@ router.get('/normatives', async (req, res) => {
   try {
     const { type, category, search } = req.query
     
-    const where: SearchWhereClause = {}
-    if (type) where.type = String(type)
+    const where: Prisma.NormativeWhereInput = {}
+    if (type) {
+      where.type = String(type) as Prisma.NormativeWhereInput['type']
+    }
     if (category) where.category = String(category)
     if (search) {
       where.OR = [
@@ -277,7 +268,7 @@ router.get('/materials', async (req, res) => {
   try {
     const { category, search } = req.query
     
-    const where: SearchWhereClause = {}
+    const where: Prisma.MaterialWhereInput = {}
     if (category) where.category = String(category)
     if (search) {
       where.OR = [
