@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   Calculator, 
@@ -35,8 +35,12 @@ interface StatCard {
   suffix?: string
 }
 
-// Demo data - in real app this would come from API
-const recentEstimates: RecentEstimate[] = [
+/**
+ * Demo data for dashboard display.
+ * TODO: Replace with API integration in production.
+ * This data demonstrates the expected format from the backend.
+ */
+const DEMO_ESTIMATES: RecentEstimate[] = [
   { id: '1', name: 'Ремонт квартиры 60м²', total: 485000, date: '2024-01-15', status: 'completed', type: 'COMMERCIAL' },
   { id: '2', name: 'Отделка офиса 150м²', total: 1250000, date: '2024-01-14', status: 'in_progress', type: 'FER' },
   { id: '3', name: 'Косметический ремонт', total: 120000, date: '2024-01-13', status: 'draft', type: 'MIXED' },
@@ -51,6 +55,20 @@ const quickActions = [
 ]
 
 export default function Dashboard() {
+  // Memoize current time to prevent unnecessary re-renders
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+  
+  // Update time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
+  
+  // Use demo data - in production, this would come from API
+  const recentEstimates = DEMO_ESTIMATES
+  
   const stats: StatCard[] = useMemo(() => [
     {
       title: 'Всего смет',
@@ -135,7 +153,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2 text-sm text-secondary-500 dark:text-secondary-400">
           <Clock className="w-4 h-4" />
-          <span>Последнее обновление: {new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span>Последнее обновление: {currentTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
 

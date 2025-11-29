@@ -106,11 +106,27 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript
         }
-        setDescription(prev => prev + ' ' + transcript)
+        // Properly handle spacing - trim and add space only if needed
+        const trimmedTranscript = transcript.trim()
+        if (trimmedTranscript) {
+          setDescription(prev => {
+            const trimmedPrev = prev.trim()
+            return trimmedPrev ? `${trimmedPrev} ${trimmedTranscript}` : trimmedTranscript
+          })
+        }
       }
 
-      recognitionRef.current.onerror = () => {
+      recognitionRef.current.onerror = (event) => {
         setIsListening(false)
+        // Provide meaningful feedback about the error
+        const errorEvent = event as Event & { error?: string }
+        if (errorEvent.error === 'not-allowed') {
+          setError('Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.')
+        } else if (errorEvent.error === 'no-speech') {
+          setError('Речь не распознана. Попробуйте говорить громче.')
+        } else {
+          setError('Ошибка распознавания речи. Попробуйте ещё раз.')
+        }
       }
 
       recognitionRef.current.onend = () => {
@@ -368,7 +384,7 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
               {projectPresets.find(p => p.id === selectedPreset)?.prompts.map((prompt, index) => (
                 <button
                   key={index}
-                  onClick={() => setDescription(prompt + ', ')}
+                  onClick={() => setDescription(prompt)}
                   className={clsx(
                     'text-xs px-3 py-1.5 rounded-lg',
                     'bg-primary-50 dark:bg-primary-900/20',
