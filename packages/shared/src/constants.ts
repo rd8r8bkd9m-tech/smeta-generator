@@ -2,7 +2,7 @@
 // Application Constants
 // ============================================
 
-export const APP_NAME = 'SMETA PRO'
+export const APP_NAME = 'ДениДом'
 export const APP_VERSION = '1.0.0'
 export const APP_DESCRIPTION = 'Профессиональная система сметных расчетов'
 

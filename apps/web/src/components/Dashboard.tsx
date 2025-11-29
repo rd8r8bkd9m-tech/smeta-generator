@@ -145,7 +145,7 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-2">
-            Добро пожаловать в SMETA PRO 👋
+            Добро пожаловать в ДениДом 👋
           </h1>
           <p className="text-secondary-600 dark:text-secondary-400">
             Обзор вашей активности и быстрые действия

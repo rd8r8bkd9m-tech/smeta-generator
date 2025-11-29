@@ -34,7 +34,7 @@ export default function Navigation() {
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-xl bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent">
-                SMETA PRO
+                ДениДом
               </span>
               <span className="text-[10px] text-secondary-400 -mt-1 tracking-wider">
                 PROFESSIONAL

@@ -83,7 +83,7 @@ export default function HomePage() {
           </h1>
           
           <p className="text-xl text-secondary-600 dark:text-secondary-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-            SMETA PRO — современная система для строительных смет. 
+            ДениДом — современная система для строительных смет. 
             Быстро, точно, удобно. Создавайте сметы как профессионал.
           </p>
           
@@ -189,7 +189,7 @@ export default function HomePage() {
             Готовы начать работу?
           </h2>
           <p className="text-secondary-600 dark:text-secondary-400 mb-8 max-w-xl mx-auto">
-            Присоединяйтесь к тысячам профессионалов, которые уже используют SMETA PRO
+            Присоединяйтесь к тысячам профессионалов, которые уже используют ДениДом
           </p>
           <Link 
             to="/register" 

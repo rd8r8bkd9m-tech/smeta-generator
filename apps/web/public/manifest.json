@@ -1,6 +1,6 @@
 {
-  "name": "SMETA PRO",
-  "short_name": "SMETA",
+  "name": "ДениДом",
+  "short_name": "ДениДом",
   "description": "Профессиональная система сметных расчетов",
   "start_url": "/",
   "display": "standalone",
