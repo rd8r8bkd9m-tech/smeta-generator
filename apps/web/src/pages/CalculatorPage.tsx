@@ -3,6 +3,7 @@ import { Search, Plus, Download, Save, Sparkles, Package, Hammer, Filter, Wand2 
 import EstimateTable from '../components/EstimateTable'
 import AIEstimateGenerator from '../components/AIEstimateGenerator'
 import EditableEstimateTable from '../components/EditableEstimateTable'
+import AIAssistantPanel from '../components/AIAssistantPanel'
 import { useStore } from '../store/useStore'
 import { GlassCard, Badge } from '../design-system/components'
 import clsx from 'clsx'
@@ -305,9 +306,29 @@ export default function CalculatorPage() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           {/* AI Generator */}
-          <AIEstimateGenerator 
-            onEstimateGenerated={handleEstimateGenerated}
-          />
+          <div className="space-y-6">
+            <AIEstimateGenerator 
+              onEstimateGenerated={handleEstimateGenerated}
+            />
+            
+            {/* AI Assistant Panel */}
+            <AIAssistantPanel
+              projectType={generatedEstimate?.parsed?.projectType || 'apartment'}
+              totalArea={generatedEstimate?.parsed?.totalArea || 60}
+              rooms={generatedEstimate?.parsed?.works?.map(w => w.description)}
+              currentItems={aiEstimateItems.map(item => ({
+                name: item.name,
+                category: item.type === 'COMMERCIAL' ? 'commercial' : 'fer',
+                price: item.price,
+              }))}
+              onRoomsDetected={(rooms) => {
+                addNotification?.('success', `Обнаружено ${rooms.length} комнат, общая площадь: ${rooms.reduce((s, r) => s + r.area, 0)} м²`)
+              }}
+              onRecommendationApply={(rec) => {
+                addNotification?.('info', `Применена рекомендация: ${rec.title}`)
+              }}
+            />
+          </div>
 
           {/* Смета (AI режим) */}
           <div className="lg:col-span-2">
