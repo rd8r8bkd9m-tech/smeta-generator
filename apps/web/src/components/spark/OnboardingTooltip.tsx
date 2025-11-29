@@ -91,9 +91,13 @@ export default function OnboardingTooltip({
     setPosition({ top, left })
 
     // Highlight target element
-    if (step.highlight) {
+    if (step.highlight && target) {
       target.classList.add('ring-2', 'ring-violet-500', 'ring-offset-2', 'z-50', 'relative')
-      return () => {
+    }
+
+    // Cleanup function to remove highlight
+    return () => {
+      if (step.highlight && target) {
         target.classList.remove('ring-2', 'ring-violet-500', 'ring-offset-2', 'z-50', 'relative')
       }
     }

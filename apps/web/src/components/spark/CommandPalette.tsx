@@ -284,6 +284,7 @@ export default function CommandPalette({
                 setSelectedIndex(0)
               }}
               placeholder="Поиск команд, AI-функций, навигации..."
+              aria-label="Поиск команд"
               className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder-zinc-400 outline-none text-base"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 rounded">
