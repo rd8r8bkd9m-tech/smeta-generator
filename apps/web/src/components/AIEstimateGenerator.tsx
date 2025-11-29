@@ -39,8 +39,21 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || errorData.error || 'Failed to generate estimate')
+        const errorData = await response.json().catch(() => ({}))
+        
+        // Provide user-friendly error messages based on status code
+        switch (response.status) {
+          case 400:
+            throw new Error(errorData.message || 'Некорректные данные. Пожалуйста, проверьте ввод.')
+          case 401:
+            throw new Error('Требуется авторизация')
+          case 503:
+            throw new Error(errorData.message || 'Сервис AI временно недоступен. Попробуйте позже.')
+          case 500:
+            throw new Error('Ошибка сервера. Пожалуйста, попробуйте позже.')
+          default:
+            throw new Error(errorData.message || errorData.error || 'Не удалось сгенерировать смету')
+        }
       }
 
       const result = await response.json()
@@ -48,11 +61,15 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
       if (result.success && result.data) {
         onEstimateGenerated(result.data)
       } else {
-        throw new Error('Invalid response from server')
+        throw new Error('Получен некорректный ответ от сервера')
       }
     } catch (err) {
       console.error('Error generating estimate:', err)
-      setError(err instanceof Error ? err.message : 'Произошла ошибка при генерации сметы')
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Ошибка сети. Проверьте подключение к интернету.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Произошла ошибка при генерации сметы')
+      }
     } finally {
       setIsGenerating(false)
     }

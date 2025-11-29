@@ -20,8 +20,8 @@ router.post('/generate', async (req: Request, res: Response) => {
     // Check if GOOGLE_AI_API_KEY is configured
     if (!process.env.GOOGLE_AI_API_KEY) {
       return res.status(503).json({
-        error: 'AI service not configured',
-        message: 'GOOGLE_AI_API_KEY environment variable is not set',
+        error: 'AI service unavailable',
+        message: 'AI generation service is not configured. Please contact support.',
       })
     }
 

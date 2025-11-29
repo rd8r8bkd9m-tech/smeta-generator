@@ -47,11 +47,14 @@ export interface PriceInfo {
 }
 
 export class NormativesMatcher {
+  private defaultLimit = 10
+
   // Search normatives by parsed work
   async findNormatives(
     work: ParsedWork,
     userId?: string,
-    region?: string
+    region?: string,
+    limit?: number
   ): Promise<MatchedNormative[]> {
     const searchTerms = this.buildSearchTerms(work)
     const categorySearch = this.getCategorySearch(work.category)
@@ -99,7 +102,7 @@ export class NormativesMatcher {
             }
           : false,
       },
-      take: 10,
+      take: limit ?? this.defaultLimit,
     })
 
     // Calculate match scores and sort
