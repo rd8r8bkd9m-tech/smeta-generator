@@ -9,6 +9,12 @@ import type { AnomalyInput, AnomalyResult, PriceRange, ModelStatus } from '../ty
 import { getMLConfig, priceFactors } from '../config.js'
 import { calculateNormParams, zScoreNormalize } from '../utils/normalization.js'
 
+// Statistical constants for IQR-based anomaly detection
+const IQR_LOWER_BOUND_MULTIPLIER = 1.5
+const IQR_UPPER_BOUND_MULTIPLIER = 1.5
+const EXPECTED_RANGE_LOWER_MULTIPLIER = 0.5
+const EXPECTED_RANGE_UPPER_MULTIPLIER = 0.5
+
 // Reference price data for categories (would be populated from database in production)
 const categoryPriceData: Record<string, { prices: number[]; unit: string }> = {
   plastering: { prices: [250, 280, 320, 350, 400, 450, 500, 550], unit: 'м²' },
@@ -196,8 +202,8 @@ export class AnomalyDetector {
   ): number {
     // Use IQR method for robustness
     const iqr = stats.q3 - stats.q1
-    const lowerBound = stats.q1 - 1.5 * iqr
-    const upperBound = stats.q3 + 1.5 * iqr
+    const lowerBound = stats.q1 - IQR_LOWER_BOUND_MULTIPLIER * iqr
+    const upperBound = stats.q3 + IQR_UPPER_BOUND_MULTIPLIER * iqr
 
     if (price < lowerBound) {
       // Below lower bound
@@ -251,10 +257,10 @@ export class AnomalyDetector {
     },
     regionalFactor: number
   ): PriceRange {
-    // Use IQR for robust range
+    // Use IQR for robust range calculation
     const iqr = stats.q3 - stats.q1
-    const min = Math.round(Math.max(stats.min, stats.q1 - 0.5 * iqr) * regionalFactor)
-    const max = Math.round(Math.min(stats.max * 1.5, stats.q3 + 0.5 * iqr) * regionalFactor)
+    const min = Math.round(Math.max(stats.min, stats.q1 - EXPECTED_RANGE_LOWER_MULTIPLIER * iqr) * regionalFactor)
+    const max = Math.round(Math.min(stats.max * 1.5, stats.q3 + EXPECTED_RANGE_UPPER_MULTIPLIER * iqr) * regionalFactor)
     const median = Math.round(stats.median * regionalFactor)
 
     return { min, max, median }

@@ -84,6 +84,7 @@ export const GenerateEstimateResponseSchema = z.object({
   ferSubtotal: z.number().optional(),
   commercialSubtotal: z.number().optional(),
   difference: z.number().optional().describe('Percentage difference from FER'),
+  mlInsights: z.any().optional().describe('ML-generated insights including predictions and anomalies'),
 })
 
 export type GenerateEstimateResponse = z.infer<typeof GenerateEstimateResponseSchema>

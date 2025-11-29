@@ -137,7 +137,7 @@ export default function MLInsightsPanel({
     if (items.length > 0) {
       fetchInsights()
     }
-  }, []) // Only fetch on mount
+  }, [items.length, projectType, region, budget])
 
   const anomaliesCount = insights?.anomalies.filter(a => a.isAnomaly).length || 0
   const savingsAmount = insights?.optimization?.savings || 0

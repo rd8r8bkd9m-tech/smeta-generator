@@ -400,9 +400,10 @@ export class PricePredictor {
       const date = new Date()
       date.setMonth(date.getMonth() + i)
 
-      // Add some variance to make forecast more realistic
-      const variance = (Math.random() - 0.5) * 0.02 * currentPrice
-      const price = Math.round(currentPrice + priceStep * i + variance)
+      // Use deterministic variance based on month index for reproducibility
+      // This creates realistic price fluctuations without randomness
+      const varianceFactor = Math.sin(i * 0.7) * 0.01
+      const price = Math.round(currentPrice + priceStep * i + currentPrice * varianceFactor)
 
       // Confidence decreases with distance
       const confidence = Math.round((baseConfidence - 0.05 * i) * 100)

@@ -39,11 +39,9 @@ export function extractItemFeatures(
   // Normalize price
   const priceNormalized = minMaxNormalize(item.price, priceRange.min, priceRange.max)
 
-  // One-hot encode category
-  const categoryEncoded = oneHotEncode(
-    item.category.toLowerCase(),
-    categoryMappings.categories as unknown as string[]
-  )
+  // One-hot encode category - convert readonly array to string array
+  const categories: string[] = [...categoryMappings.categories]
+  const categoryEncoded = oneHotEncode(item.category.toLowerCase(), categories)
 
   // Get seasonal factor
   const seasonalFactor = priceFactors.seasonal[currentMonth]

@@ -1,6 +1,7 @@
 import { ai } from '../genkit.config.js'
 import { z } from 'zod'
 import type { PricePrediction, SmartRecommendation, MarketTrend } from '../schemas/assistant.schema.js'
+import { mlService } from '../../ml/index.js'
 
 const PricePredictionOutputSchema = z.object({
   predictions: z.array(z.object({
@@ -96,6 +97,51 @@ ${input.items.map(item => `- ${item.name} (${item.category}): ${item.currentPric
 Ответь в формате JSON.`
 
     try {
+      // First try ML-based prediction as primary source
+      try {
+        const mlPredictions = await mlService.predictPrices(
+          input.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            currentPrice: item.currentPrice,
+            region: input.region,
+          })),
+          input.forecastMonths
+        )
+
+        // Convert ML predictions to expected format
+        const predictions = mlPredictions.map(p => ({
+          itemId: p.itemId,
+          itemName: input.items.find(i => i.id === p.itemId)?.name || p.itemId,
+          currentPrice: p.currentPrice,
+          predictedPrice: p.predictedPrice,
+          priceChange: ((p.predictedPrice - p.currentPrice) / p.currentPrice) * 100,
+          confidence: p.confidence,
+          factors: p.factors.map(f => ({
+            factor: f.name,
+            impact: f.impact,
+            weight: f.weight,
+            description: f.description,
+          })),
+          forecast: p.forecast,
+          region: input.region,
+          season: getSeason(new Date().getMonth()),
+        }))
+
+        // Return ML predictions if successful
+        if (predictions.length > 0) {
+          console.log('Using ML-based price predictions')
+          return {
+            predictions,
+            marketTrends: generateFallbackPredictions(input.items, input.forecastMonths || 3).marketTrends,
+          }
+        }
+      } catch (mlError) {
+        console.warn('ML prediction failed, falling back to AI:', mlError)
+      }
+
+      // Fall back to AI-based prediction
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash',
         prompt,
