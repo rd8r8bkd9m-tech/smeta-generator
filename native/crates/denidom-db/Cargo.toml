@@ -1,0 +1,12 @@
+[package]
+name = "denidom-db"
+version.workspace = true
+edition.workspace = true
+description = "Database layer for DeniDom (SQLite/PostgreSQL)"
+
+[dependencies]
+denidom-core = { path = "../denidom-core" }
+rusqlite.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true

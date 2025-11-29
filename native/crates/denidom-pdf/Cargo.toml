@@ -1,0 +1,11 @@
+[package]
+name = "denidom-pdf"
+version.workspace = true
+edition.workspace = true
+description = "PDF generator for construction documents (KS-2, KS-3, M-29)"
+
+[dependencies]
+denidom-core = { path = "../denidom-core" }
+printpdf.workspace = true
+lopdf.workspace = true
+thiserror.workspace = true

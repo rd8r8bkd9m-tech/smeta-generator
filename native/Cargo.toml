@@ -1,0 +1,72 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/denidom-core",
+    "crates/denidom-simd",
+    "crates/denidom-pdf",
+    "crates/denidom-parser",
+    "crates/denidom-db",
+    "crates/denidom-api",
+    "crates/denidom-cli",
+    # "apps/desktop/src-tauri",  # Requires Tauri CLI setup
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["DeniDom Team"]
+license = "MIT"
+repository = "https://github.com/denidom/denidom-native"
+description = "DeniDom - High-performance construction estimate calculations"
+
+[workspace.dependencies]
+# Core
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rust_decimal = { version = "1.33", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Database
+rusqlite = { version = "0.30", features = ["bundled"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite"] }
+
+# PDF
+printpdf = "0.7"
+lopdf = "0.31"
+
+# Parsing
+calamine = "0.24"
+quick-xml = "0.31"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Web/API
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Testing
+criterion = "0.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+opt-level = 3
+debug = false

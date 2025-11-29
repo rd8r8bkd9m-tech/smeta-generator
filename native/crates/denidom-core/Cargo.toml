@@ -1,0 +1,16 @@
+[package]
+name = "denidom-core"
+version.workspace = true
+edition.workspace = true
+description = "Core types and calculation engine for DeniDom"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
