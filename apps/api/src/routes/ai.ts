@@ -718,4 +718,273 @@ function getRegionalData() {
   ]
 }
 
+// =====================================================
+// ML ENDPOINTS (Machine Learning Features)
+// =====================================================
+
+import { mlService } from '../ml/index.js'
+
+// GET /api/ai/ml/status - Get ML models status
+router.get('/ml/status', async (_req: Request, res: Response) => {
+  try {
+    const status = mlService.getStatus()
+    res.json({
+      success: true,
+      data: status,
+    })
+  } catch (error) {
+    console.error('Error getting ML status:', error)
+    res.status(500).json({
+      error: 'Failed to get ML status',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/predict-prices - ML price prediction
+router.post('/ml/predict-prices', async (req: Request, res: Response) => {
+  try {
+    const { items, forecastMonths, region } = req.body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Items array is required',
+      })
+    }
+
+    const predictions = await mlService.predictPrices(
+      items.map((item: Record<string, unknown>) => ({
+        id: String(item.id || item.itemId || ''),
+        name: String(item.name || ''),
+        category: String(item.category || 'general'),
+        currentPrice: Number(item.currentPrice || item.price || 0),
+        region: region || item.region,
+      })),
+      forecastMonths || 3
+    )
+
+    res.json({
+      success: true,
+      data: {
+        predictions,
+        forecastMonths: forecastMonths || 3,
+        generatedAt: new Date().toISOString(),
+      },
+    })
+  } catch (error) {
+    console.error('Error in ML price prediction:', error)
+    res.status(500).json({
+      error: 'Failed to predict prices',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/recommend - ML recommendations
+router.post('/ml/recommend', async (req: Request, res: Response) => {
+  try {
+    const { projectType, totalArea, budget, region, currentItems } = req.body
+
+    if (!projectType || !totalArea) {
+      return res.status(400).json({
+        error: 'projectType and totalArea are required',
+      })
+    }
+
+    const recommendations = await mlService.getRecommendations(
+      projectType,
+      Number(totalArea),
+      {
+        budget: budget ? Number(budget) : undefined,
+        region,
+        currentItems: currentItems?.map((item: Record<string, unknown>) => ({
+          id: String(item.id || ''),
+          name: String(item.name || ''),
+          category: String(item.category || 'general'),
+          price: Number(item.price || 0),
+          quantity: Number(item.quantity || 1),
+        })),
+      }
+    )
+
+    res.json({
+      success: true,
+      data: recommendations,
+    })
+  } catch (error) {
+    console.error('Error generating ML recommendations:', error)
+    res.status(500).json({
+      error: 'Failed to generate recommendations',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/classify-work - ML work classification
+router.post('/ml/classify-work', async (req: Request, res: Response) => {
+  try {
+    const { text, texts } = req.body
+
+    if (!text && (!texts || !Array.isArray(texts))) {
+      return res.status(400).json({
+        error: 'Either text or texts array is required',
+      })
+    }
+
+    if (texts && Array.isArray(texts)) {
+      // Batch classification
+      const results = await Promise.all(
+        texts.map((t: string) => mlService.classifyWork(String(t)))
+      )
+      return res.json({
+        success: true,
+        data: results,
+      })
+    }
+
+    // Single classification
+    const classification = await mlService.classifyWork(String(text))
+
+    res.json({
+      success: true,
+      data: classification,
+    })
+  } catch (error) {
+    console.error('Error classifying work:', error)
+    res.status(500).json({
+      error: 'Failed to classify work',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/detect-anomalies - ML anomaly detection
+router.post('/ml/detect-anomalies', async (req: Request, res: Response) => {
+  try {
+    const { items, region } = req.body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Items array is required',
+      })
+    }
+
+    const anomalies = await mlService.detectAnomalies(
+      items.map((item: Record<string, unknown>) => ({
+        id: String(item.id || item.itemId || ''),
+        name: String(item.name || ''),
+        category: String(item.category || 'general'),
+        price: Number(item.price || 0),
+        quantity: Number(item.quantity || 1),
+        region: region || item.region,
+      }))
+    )
+
+    // Summary statistics
+    const anomalyCount = anomalies.filter((a) => a.isAnomaly).length
+    const highPriceCount = anomalies.filter((a) => a.anomalyType === 'price_high').length
+    const lowPriceCount = anomalies.filter((a) => a.anomalyType === 'price_low').length
+
+    res.json({
+      success: true,
+      data: {
+        anomalies,
+        summary: {
+          totalItems: items.length,
+          anomaliesFound: anomalyCount,
+          highPriceAnomalies: highPriceCount,
+          lowPriceAnomalies: lowPriceCount,
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error detecting anomalies:', error)
+    res.status(500).json({
+      error: 'Failed to detect anomalies',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/optimize - ML cost optimization
+router.post('/ml/optimize', async (req: Request, res: Response) => {
+  try {
+    const { items, budget, qualityLevel } = req.body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Items array is required',
+      })
+    }
+
+    const optimization = await mlService.optimizeCosts(
+      items.map((item: Record<string, unknown>) => ({
+        id: String(item.id || item.itemId || ''),
+        name: String(item.name || ''),
+        category: String(item.category || 'general'),
+        price: Number(item.price || item.currentPrice || 0),
+        quantity: Number(item.quantity || 1),
+      })),
+      {
+        budget: budget ? Number(budget) : undefined,
+        qualityLevel: qualityLevel || 'standard',
+      }
+    )
+
+    res.json({
+      success: true,
+      data: optimization,
+    })
+  } catch (error) {
+    console.error('Error optimizing costs:', error)
+    res.status(500).json({
+      error: 'Failed to optimize costs',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// POST /api/ai/ml/insights - Get comprehensive ML insights
+router.post('/ml/insights', async (req: Request, res: Response) => {
+  try {
+    const { items, projectType, region, budget } = req.body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Items array is required',
+      })
+    }
+
+    if (!projectType) {
+      return res.status(400).json({
+        error: 'projectType is required',
+      })
+    }
+
+    const insights = await mlService.getInsights({
+      items: items.map((item: Record<string, unknown>) => ({
+        id: String(item.id || item.itemId || ''),
+        name: String(item.name || ''),
+        category: String(item.category || 'general'),
+        price: Number(item.price || item.currentPrice || 0),
+        quantity: Number(item.quantity || 1),
+      })),
+      projectType: String(projectType),
+      region,
+      budget: budget ? Number(budget) : undefined,
+    })
+
+    res.json({
+      success: true,
+      data: insights,
+    })
+  } catch (error) {
+    console.error('Error generating ML insights:', error)
+    res.status(500).json({
+      error: 'Failed to generate insights',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 export default router
