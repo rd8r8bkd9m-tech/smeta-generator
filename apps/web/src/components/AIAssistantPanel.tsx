@@ -134,8 +134,24 @@ export default function AIAssistantPanel({
   const [marketTrends, setMarketTrends] = useState<MarketTrend[]>([])
   const [marketInsights, setMarketInsights] = useState<Array<{ type: string; message: string; priority: string }>>([])
 
+  // File validation constants
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
   // Handle blueprint upload
   const handleBlueprintUpload = useCallback(async (file: File) => {
+    // Validate file type
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Неподдерживаемый формат файла. Допустимы: JPEG, PNG, WebP, GIF')
+      return
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      setError('Файл слишком большой. Максимальный размер: 10 МБ')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 

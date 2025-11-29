@@ -3,6 +3,7 @@
 // ============================================
 
 export const APP_NAME = 'ДениДом'
+export const APP_NAME_LATIN = 'DeniDom'
 export const APP_VERSION = '1.0.0'
 export const APP_DESCRIPTION = 'Профессиональная система сметных расчетов'
 

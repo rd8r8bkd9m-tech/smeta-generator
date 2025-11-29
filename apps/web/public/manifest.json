@@ -1,6 +1,6 @@
 {
-  "name": "ДениДом",
-  "short_name": "ДениДом",
+  "name": "DeniDom",
+  "short_name": "DeniDom",
   "description": "Профессиональная система сметных расчетов",
   "start_url": "/",
   "display": "standalone",

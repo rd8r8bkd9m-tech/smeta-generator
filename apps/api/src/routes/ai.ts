@@ -430,6 +430,25 @@ router.post('/blueprint/analyze', async (req: Request, res: Response) => {
       })
     }
 
+    // Validate base64 image size (max 10MB)
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const imageSize = Buffer.byteLength(imageBase64, 'base64')
+    if (imageSize > MAX_IMAGE_SIZE) {
+      return res.status(400).json({
+        error: 'Image too large',
+        message: 'Maximum image size is 10MB',
+      })
+    }
+
+    // Validate image type
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (imageType && !ALLOWED_TYPES.includes(imageType)) {
+      return res.status(400).json({
+        error: 'Invalid image type',
+        message: 'Allowed types: JPEG, PNG, WebP, GIF',
+      })
+    }
+
     // Check if AI is configured
     if (!process.env.GOOGLE_AI_API_KEY) {
       return res.status(503).json({
