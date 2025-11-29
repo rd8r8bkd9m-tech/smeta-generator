@@ -1,8 +1,16 @@
 import { Link } from 'react-router-dom'
-import { Calculator, FolderOpen, Users, TrendingUp, FileText, Shield, ArrowRight, Sparkles, Zap, Award } from 'lucide-react'
-import { GlassCard, AnimatedNumber, ProgressRing } from '../design-system/components'
+import { Calculator, FolderOpen, Users, TrendingUp, FileText, ArrowRight, Zap, Award, Wand2 } from 'lucide-react'
+import { GlassCard, AnimatedNumber, ProgressRing, Badge } from '../design-system/components'
+import Dashboard from '../components/Dashboard'
 
 const features = [
+  {
+    icon: Wand2,
+    title: 'AI-генератор смет',
+    description: 'Создавайте сметы голосом или текстом — AI подберёт позиции из базы ФЕР',
+    gradient: 'from-violet-500 to-purple-500',
+    badge: 'Новое',
+  },
   {
     icon: Calculator,
     title: 'Умный калькулятор',
@@ -19,7 +27,7 @@ const features = [
     icon: FolderOpen,
     title: 'Управление проектами',
     description: 'Ведение проектов с историей изменений и версионированием',
-    gradient: 'from-violet-500 to-purple-500',
+    gradient: 'from-emerald-500 to-teal-500',
   },
   {
     icon: Users,
@@ -31,41 +39,40 @@ const features = [
     icon: TrendingUp,
     title: 'Аналитика',
     description: 'Отчеты и графики по проектам, расходам и прибыли',
-    gradient: 'from-emerald-500 to-teal-500',
-  },
-  {
-    icon: Shield,
-    title: 'Надежность',
-    description: 'Облачное хранение данных с автоматическим резервированием',
-    gradient: 'from-slate-500 to-zinc-600',
+    gradient: 'from-indigo-500 to-blue-500',
   },
 ]
 
 const stats = [
-  { value: 10000, suffix: '+', label: 'Позиций в базе' },
+  { value: 15000, suffix: '+', label: 'Позиций в базе' },
   { value: 2024, suffix: '', label: 'Актуальные ФЕР' },
-  { value: 99.9, suffix: '%', label: 'Доступность' },
+  { value: 99.9, suffix: '%', label: 'Точность AI' },
   { value: 24, suffix: '/7', label: 'Поддержка' },
 ]
 
 export default function HomePage() {
   return (
     <div className="space-y-16 pb-8">
+      {/* Dashboard Section */}
+      <Dashboard />
+      
       {/* Hero Section */}
       <section className="relative text-center py-16 overflow-hidden">
         {/* Background decorations */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 right-10 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="relative animate-fade-in-up">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 mb-6">
-            <Sparkles className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-              Новое поколение сметных систем
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-purple-500/10 dark:from-violet-500/20 dark:to-purple-500/20 border border-violet-200 dark:border-violet-800 mb-6">
+            <Wand2 className="w-4 h-4 text-violet-500" />
+            <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
+              AI-генерация смет с голосовым вводом
             </span>
+            <Badge variant="gradient" size="sm">Новое</Badge>
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-secondary-900 dark:text-white mb-6 tracking-tight">
@@ -130,8 +137,13 @@ export default function HomePage() {
             <GlassCard 
               key={index} 
               hoverable 
-              className="p-6 stagger-item"
+              className="p-6 stagger-item relative overflow-hidden"
             >
+              {'badge' in feature && feature.badge && (
+                <Badge variant="gradient" size="sm" className="absolute top-4 right-4">
+                  {feature.badge}
+                </Badge>
+              )}
               <div className={`w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
