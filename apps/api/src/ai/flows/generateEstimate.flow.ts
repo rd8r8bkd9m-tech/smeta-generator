@@ -10,6 +10,7 @@ import {
 } from '../schemas/estimate.schema.js'
 import { parseRequest } from './parseRequest.flow.js'
 import { normativesMatcher } from '../services/normativesMatcher.js'
+import { mlService } from '../../ml/index.js'
 
 // Generate estimate from text description
 export const generateEstimateFlow = ai.defineFlow(
@@ -121,6 +122,29 @@ export const generateEstimateFlow = ai.defineFlow(
         ? Math.round(((commercialSubtotal - ferSubtotal) / ferSubtotal) * 100)
         : undefined
 
+    // Get ML insights for the generated estimate
+    // This enriches the response with price predictions, recommendations, and anomaly detection
+    let mlInsights = null
+    try {
+      if (items.length > 0) {
+        mlInsights = await mlService.getInsights({
+          items: items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            category: parsed.works.find((w) => item.name.toLowerCase().includes(w.keywords[0]?.toLowerCase() || ''))?.category || 'general',
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          projectType: parsed.projectType || 'apartment',
+          region,
+        })
+        console.log('ML insights generated for estimate')
+      }
+    } catch (mlError) {
+      // ML insights are optional - continue without them if generation fails
+      console.warn('ML insights generation failed:', mlError)
+    }
+
     return {
       items,
       parsed,
@@ -128,6 +152,7 @@ export const generateEstimateFlow = ai.defineFlow(
       ferSubtotal: ferSubtotal > 0 ? ferSubtotal : undefined,
       commercialSubtotal: commercialSubtotal > 0 ? commercialSubtotal : undefined,
       difference,
+      mlInsights,
     } as GenerateEstimateResponse
   }
 )
