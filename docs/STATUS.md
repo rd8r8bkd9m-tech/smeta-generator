@@ -32,23 +32,32 @@
   11. **Настройки** — SettingsPage с переключателями и ссылками
   12. **Успех публикации** — SuccessPage с share link и QR
 
-## Итерация C: Viewer gestures + motion + sheets + toasts ⏳
+## Итерация C: Viewer gestures + motion + sheets + toasts ✅
 
-- ✅ Базовые анимации присутствуют во всех компонентах
+- ✅ Базовые анимации присутствуют во всех компонентах (Framer Motion)
 - ✅ StoryRing с пульсирующим эффектом для новых статусов
-- ✅ Прогресс-бары с анимированным заполнением
-- ✅ Кнопки с scale-анимациями при нажатии
-- 🔄 Требуется доработать: bottom sheets, toast notifications, сложные gesture-обработчики
+- ✅ Прогресс-бары с анимированным заполнением в Viewer
+- ✅ Кнопки с scale-анимациями при нажатии (active:scale-95)
+- ✅ Stagger анимации для списков элементов
+- ✅ Smooth transitions между экранами
+- ✅ Gesture-обработчик в Viewer (tap zones, hold pause)
 
-## Итерация D: Light theme + polishing + accessibility ⏳
+## Итерация D: Light theme + polishing + accessibility ✅
 
-- ✅ Dark тема по умолчанию реализована
-- 🔄 Требуется: light theme переключатель, финальная полировка, проверка accessibility
+- ✅ Light/dark theme система с CSS переменными и persist storage
+- ✅ Переключатель темы в настройках с иконками Moon/Sun
+- ✅ BottomSheet компонент с drag-to-close и spring анимациями
+- ✅ Toast система с auto-dismiss и анимациями
+- ✅ SegmentedControl, SearchInput, StatChip компоненты с accessibility
+- ✅ Focus states, ARIA labels, keyboard navigation
+- ✅ Touch targets 44px+, proper contrast ratios
 
 ## Итерация E: Документация ✅
 
 - ✅ Создан STATUS.md с текущим состоянием
 - ✅ Создан DECISIONS.md с принятыми решениями
+- ✅ Добавлен script dev:mobile в корневой package.json
+- ✅ Экспорты компонентов в index.ts
 
 ## 🚀 Запуск приложения
 

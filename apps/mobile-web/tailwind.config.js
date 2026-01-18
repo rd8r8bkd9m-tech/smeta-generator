@@ -9,32 +9,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Фоновые цвета
-        bg0: colors.bg0,
-        bg1: colors.bg1,
-        bg2: colors.bg2,
+        // Фоновые цвета (используем CSS переменные для динамической темы)
+        bg0: 'rgb(var(--bg-0))',
+        bg1: 'rgb(var(--bg-1))',
+        bg2: 'rgb(var(--bg-2))',
 
         // Поверхности
-        surface: colors.surface,
-        'surface-hover': colors.surfaceHover,
+        surface: 'rgb(var(--surface))',
+        'surface-hover': 'rgb(var(--surface-hover))',
 
         // Разделители
-        stroke: colors.stroke,
+        stroke: 'rgb(var(--stroke))',
 
         // Текст
-        textPrimary: colors.textPrimary,
-        textSecondary: colors.textSecondary,
-        textTertiary: colors.textTertiary,
+        textPrimary: 'rgb(var(--text-primary))',
+        textSecondary: 'rgb(var(--text-secondary))',
+        textTertiary: 'rgb(var(--text-tertiary))',
 
         // Акцент
-        accent: colors.accent,
-        accentHover: colors.accentHover,
-        accentLight: colors.accentLight,
+        accent: 'rgb(var(--accent))',
+        accentHover: 'rgb(var(--accent-hover))',
+        accentLight: 'rgb(var(--accent-light))',
 
         // Статусы
-        success: colors.success,
-        warning: colors.warning,
-        danger: colors.danger,
+        success: 'rgb(var(--success))',
+        warning: 'rgb(var(--warning))',
+        danger: 'rgb(var(--danger))',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

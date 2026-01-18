@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Outlet } from 'react-router-dom'
 import { BottomNavigation } from './BottomNavigation'
+import { ToastContainer } from './Toast'
 
 interface AppShellProps {
   children?: React.ReactNode
@@ -39,6 +40,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Safe area bottom */}
         <div className="safe-area-bottom" />
+
+        {/* Toast notifications */}
+        <ToastContainer />
       </div>
     </div>
   )

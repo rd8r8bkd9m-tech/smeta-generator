@@ -185,7 +185,7 @@ export default function ProjectDetailsPage() {
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(estimate.total)}</p>
                   <Link
-                    to={`/estimates/${estimate.id}`}
+                    to={`/calculator?estimateId=${estimate.id}&projectId=${project.id}`}
                     className="text-sm text-blue-600 hover:underline"
                   >
                     Открыть

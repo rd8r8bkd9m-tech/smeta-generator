@@ -1,12 +1,19 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Check, Share, Home } from 'lucide-react'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { GhostButton } from '../components/GhostButton'
+import { useToast } from '../hooks/useToast'
 
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    // Показываем toast при входе на страницу
+    toast.success('Статус опубликован!', 'Он появится в ленте через несколько секунд')
+  }, [toast])
 
   return (
     <div className="min-h-full flex flex-col px-6 py-12">

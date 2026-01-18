@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, MessageCircle, UserPlus, AtSign, MoreHorizontal } from 'lucide-react'
 import { GlassCard } from '../components/GlassCard'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { mockInboxItems } from '../mock/data'
 
 export const InboxPage: React.FC = () => {
@@ -49,28 +50,14 @@ export const InboxPage: React.FC = () => {
         transition={{ delay: 0.1 }}
         className="px-6 mb-6"
       >
-        <div className="flex bg-surface rounded-xl p-1">
-          <button
-            onClick={() => setSelectedTab('all')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              selectedTab === 'all'
-                ? 'bg-accent text-white'
-                : 'text-textSecondary hover:text-textPrimary'
-            }`}
-          >
-            Все ({mockInboxItems.length})
-          </button>
-          <button
-            onClick={() => setSelectedTab('unread')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              selectedTab === 'unread'
-                ? 'bg-accent text-white'
-                : 'text-textSecondary hover:text-textPrimary'
-            }`}
-          >
-            Непрочитанные ({mockInboxItems.filter(item => !item.isRead).length})
-          </button>
-        </div>
+        <SegmentedControl
+          options={[
+            { value: 'all', label: `Все (${mockInboxItems.length})` },
+            { value: 'unread', label: `Непрочитанные (${mockInboxItems.filter(item => !item.isRead).length})` },
+          ]}
+          value={selectedTab}
+          onChange={(value) => setSelectedTab(value as 'all' | 'unread')}
+        />
       </motion.div>
 
       {/* Inbox items */}

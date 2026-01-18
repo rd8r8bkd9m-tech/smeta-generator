@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, Bell, Shield, Palette, Globe, HelpCircle, LogOut } from 'lucide-react'
+import { ChevronRight, Bell, Shield, Palette, Globe, HelpCircle, LogOut, Moon, Sun } from 'lucide-react'
 import { GlassCard } from '../components/GlassCard'
+import { useTheme } from '../hooks/useTheme'
 
 export const SettingsPage: React.FC = () => {
   const [notifications, setNotifications] = useState(true)
-  const [darkMode, setDarkMode] = useState(true)
+  const { isDark, toggleTheme } = useTheme()
 
   const settingsSections = [
     {
@@ -24,11 +25,11 @@ export const SettingsPage: React.FC = () => {
       title: 'Внешний вид',
       items: [
         {
-          icon: Palette,
-          label: 'Тёмная тема',
+          icon: isDark ? Moon : Sun,
+          label: isDark ? 'Тёмная тема' : 'Светлая тема',
           type: 'toggle' as const,
-          value: darkMode,
-          onChange: setDarkMode,
+          value: isDark,
+          onChange: toggleTheme,
         },
       ],
     },

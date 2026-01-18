@@ -101,11 +101,16 @@ export default function CalculatorPage() {
       const template = templates.find((t: any) => t.id === id)
       
       if (template) {
-        const manualItems: ManualEstimateItem[] = template.items.map((item: any) => ({
-          ...item,
-          quantity: item.quantity || 1,
-          total: item.quantity * item.price
-        }))
+        const manualItems: ManualEstimateItem[] = template.items.map((item: any) => {
+          const quantity = item.quantity ?? 1
+          const price = item.price ?? 0
+          return {
+            ...item,
+            quantity,
+            price,
+            total: item.total ?? quantity * price,
+          }
+        })
         setEstimateItems(manualItems)
         setEstimateName(template.name || 'Новая смета')
         setEstimateDescription(template.description || '')
@@ -163,6 +168,49 @@ export default function CalculatorPage() {
     }
   }
 
+  useEffect(() => {
+    if (estimateId || draftLoaded) return
+    if (estimateItems.length > 0 || aiEstimateItems.length > 0) return
+
+    const saved = localStorage.getItem(draftKey)
+    if (!saved) {
+      setDraftLoaded(true)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(saved)
+      setEstimateName(parsed.estimateName || 'Новая смета')
+      setEstimateDescription(parsed.estimateDescription || '')
+      setSelectedProjectId(parsed.selectedProjectId || '')
+      if (parsed.viewMode === 'ai') {
+        setAiEstimateItems(parsed.aiEstimateItems || [])
+        setViewMode('ai')
+      } else {
+        setEstimateItems(parsed.estimateItems || [])
+        setViewMode('manual')
+      }
+    } catch (error) {
+      console.error('Failed to load draft:', error)
+    } finally {
+      setDraftLoaded(true)
+    }
+  }, [aiEstimateItems.length, draftKey, draftLoaded, estimateId, estimateItems.length])
+
+  useEffect(() => {
+    if (estimateId) return
+    const payload = {
+      estimateName,
+      estimateDescription,
+      selectedProjectId,
+      viewMode,
+      estimateItems,
+      aiEstimateItems,
+      updatedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(draftKey, JSON.stringify(payload))
+  }, [aiEstimateItems, draftKey, estimateDescription, estimateId, estimateItems, estimateName, selectedProjectId, viewMode])
+
   const filteredCatalog = catalogItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = filterType === 'all' || item.type === filterType
@@ -213,8 +261,11 @@ export default function CalculatorPage() {
     setGeneratedEstimate(estimate)
     setAiEstimateItems(estimate.items)
     setViewMode('ai')
+    if (!estimateName || estimateName === 'Новая смета') {
+      setEstimateName(`AI смета — ${new Date().toLocaleDateString('ru-RU')}`)
+    }
     addNotification?.('success', `Сгенерировано ${estimate.items.length} позиций`)
-  }, [addNotification])
+  }, [addNotification, estimateName])
 
   const updateAiQuantity = useCallback((id: string, quantity: number) => {
     setAiEstimateItems(items =>
@@ -240,12 +291,94 @@ export default function CalculatorPage() {
     setAiEstimateItems(items => items.filter(item => item.id !== id))
   }, [])
 
-  const handleSave = () => {
-    addNotification?.('success', 'Смета сохранена')
+  const getCurrentItems = () => (viewMode === 'ai' ? aiEstimateItems : estimateItems)
+
+  const normalizeItems = (items: Array<AIEstimateItem | ManualEstimateItem>) =>
+    items.map((item) => ({
+      ...item,
+      total: item.total ?? item.quantity * item.price,
+    }))
+
+  const calculateSubtotal = (items: Array<AIEstimateItem | ManualEstimateItem>) =>
+    items.reduce((sum, item) => sum + (item.total ?? item.quantity * item.price), 0)
+
+  const inferEstimateType = (items: Array<AIEstimateItem | ManualEstimateItem>) => {
+    const hasFer = items.some((item: any) => item.type === 'FER')
+    const hasCommercial = items.some((item: any) => item.type === 'COMMERCIAL')
+    if (hasFer && hasCommercial) return 'MIXED'
+    if (hasFer) return 'FER'
+    return 'COMMERCIAL'
+  }
+
+  const handleSave = async () => {
+    const items = getCurrentItems()
+    if (!estimateName.trim()) {
+      addNotification?.('error', 'Укажите название сметы')
+      return
+    }
+    if (items.length === 0) {
+      addNotification?.('warning', 'Добавьте хотя бы одну позицию')
+      return
+    }
+
+    setIsSaving(true)
+    setSaveStatus('saving')
+
+    try {
+      const normalizedItems = normalizeItems(items)
+      const subtotal = calculateSubtotal(normalizedItems)
+
+      const payload = {
+        name: estimateName.trim(),
+        description: estimateDescription || undefined,
+        items: normalizedItems,
+        subtotal,
+        total: subtotal,
+        type: inferEstimateType(normalizedItems),
+        projectId: selectedProjectId || undefined,
+        userId: DEMO_USER_ID,
+      }
+
+      const endpoint = estimateId
+        ? `${API_URL}/calculator/estimates/${estimateId}`
+        : `${API_URL}/calculator/estimates`
+
+      const response = await fetch(endpoint, {
+        method: estimateId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData?.error || 'Ошибка сохранения')
+      }
+
+      const saved = await response.json()
+      setEstimateId(saved.id)
+      setSaveStatus('saved')
+      localStorage.removeItem(draftKey)
+
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('estimateId', saved.id)
+      if (selectedProjectId) {
+        nextParams.set('projectId', selectedProjectId)
+      }
+      setSearchParams(nextParams, { replace: true })
+
+      addNotification?.('success', 'Смета сохранена в базе')
+    } catch (error) {
+      console.error('Failed to save estimate:', error)
+      setSaveStatus('error')
+      addNotification?.('error', error instanceof Error ? error.message : 'Ошибка сохранения')
+    } finally {
+      setIsSaving(false)
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }
   }
 
   const handleExport = () => {
-    addNotification?.('info', 'Экспорт в Excel...')
+    addNotification?.('info', 'Экспорт в Excel скоро будет доступен')
   }
 
   const formatPrice = (price: number) => {
@@ -298,12 +431,33 @@ export default function CalculatorPage() {
               AI
             </button>
           </div>
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-secondary-500 dark:text-secondary-400">
+            {saveStatus === 'saving' && (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Сохранение...
+              </>
+            )}
+            {saveStatus === 'saved' && (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                Сохранено
+              </>
+            )}
+            {saveStatus === 'error' && (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                Ошибка сохранения
+              </>
+            )}
+          </div>
           <button 
             onClick={handleSave} 
+            disabled={isSaving}
             className="btn btn-secondary flex items-center gap-2"
           >
-            <Save className="w-4 h-4" />
-            <span>Сохранить</span>
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>{isSaving ? 'Сохранение...' : 'Сохранить'}</span>
           </button>
           <button 
             onClick={handleExport} 
@@ -314,6 +468,69 @@ export default function CalculatorPage() {
           </button>
         </div>
       </div>
+
+      {/* Project & Estimate Details */}
+      <GlassCard className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
+              Название сметы *
+            </label>
+            <input
+              type="text"
+              value={estimateName}
+              onChange={(e) => setEstimateName(e.target.value)}
+              className="input w-full"
+              placeholder="Например: Штукатурка стен 109 м²"
+            />
+            {estimateId && (
+              <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
+                ID сметы: {estimateId}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
+              Проект
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">Без проекта</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                  {project.client?.name ? ` — ${project.client.name}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
+              <Link to="/projects" className="text-primary-600 hover:underline">
+                Управление проектами
+              </Link>
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
+              Описание
+            </label>
+            <textarea
+              value={estimateDescription}
+              onChange={(e) => setEstimateDescription(e.target.value)}
+              className="input w-full"
+              rows={2}
+              placeholder="Краткое описание работ..."
+            />
+          </div>
+        </div>
+        {loadError && (
+          <div className="mt-4 text-sm text-rose-600 dark:text-rose-400">
+            {loadError}
+          </div>
+        )}
+      </GlassCard>
 
       {viewMode === 'manual' ? (
         <div className="grid lg:grid-cols-3 gap-6">
