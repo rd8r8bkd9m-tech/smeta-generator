@@ -165,7 +165,7 @@ export class CostOptimizer {
     const qualityImpact = this.assessQualityImpact(changes, targetQuality)
 
     // Generate recommendations
-    const recommendations = this.generateRecommendations(input, changes, savings)
+    const recommendations = this.generateRecommendations(input, savings)
 
     return {
       originalTotal: Math.round(originalTotal),
@@ -333,7 +333,6 @@ export class CostOptimizer {
    */
   private generateRecommendations(
     input: OptimizationInput,
-    changes: OptimizationChange[],
     totalSavings: number
   ): string[] {
     const recommendations: string[] = []

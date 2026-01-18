@@ -2,33 +2,135 @@ import { Router, type Request, type Response, type Router as RouterType } from '
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma.js'
-import { generateEstimate } from '../ai/flows/generateEstimate.flow.js'
+// Lazy imports for AI modules - only load when AI is configured
+// import { generateEstimate } from '../ai/flows/generateEstimate.flow.js'
+// import { multiAgentEstimateFlow } from '../ai/flows/multiAgentEstimate.flow.js'
 import { normativesMatcher } from '../ai/services/normativesMatcher.js'
-import { parseVoiceCommand, parseVoiceCommandLocal } from '../ai/flows/voiceCommand.flow.js'
-import { analyzeBlueprint, analyzeRoomsManually } from '../ai/flows/blueprintAnalysis.flow.js'
-import { predictPrices, generateRecommendations } from '../ai/flows/pricePrediction.flow.js'
+import { parseVoiceCommandLocal } from '../ai/flows/voiceCommand.flow.js'
+import { analyzeRoomsManually } from '../ai/flows/blueprintAnalysis.flow.js'
+// import { predictPrices, generateRecommendations } from '../ai/flows/pricePrediction.flow.js'
 import {
   GenerateEstimateRequestSchema,
   CustomPriceRequestSchema,
   ImportCommercialPricesRequestSchema,
 } from '../ai/schemas/estimate.schema.js'
 
+// Lazy load AI modules only when needed
+let generateEstimate: any = null
+let multiAgentEstimateFlow: any = null
+let parseVoiceCommand: any = null
+let analyzeBlueprint: any = null
+let predictPrices: any = null
+let generateRecommendations: any = null
+
+async function loadAIModules() {
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    return false
+  }
+  if (!generateEstimate) {
+    const genModule = await import('../ai/flows/generateEstimate.flow.js')
+    generateEstimate = genModule.generateEstimate
+    
+    const multiModule = await import('../ai/flows/multiAgentEstimate.flow.js')
+    multiAgentEstimateFlow = multiModule.multiAgentEstimateFlow
+    
+    const voiceModule = await import('../ai/flows/voiceCommand.flow.js')
+    parseVoiceCommand = voiceModule.parseVoiceCommand
+    
+    const blueprintModule = await import('../ai/flows/blueprintAnalysis.flow.js')
+    analyzeBlueprint = blueprintModule.analyzeBlueprint
+    
+    const priceModule = await import('../ai/flows/pricePrediction.flow.js')
+    predictPrices = priceModule.predictPrices
+    generateRecommendations = priceModule.generateRecommendations
+  }
+  return true
+}
+
 const router: RouterType = Router()
 
-// POST /api/ai/generate - Generate estimate from text description
+/**
+ * @swagger
+ * /api/ai/generate:
+ *   post:
+ *     summary: Генерация сметы по текстовому описанию
+ *     tags: [AI]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [description]
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: Описание работ (например, "штукатурка стен 109 м2")
+ *               estimateType:
+ *                 type: string
+ *                 enum: [COMMERCIAL, BUDGET, INTERNAL]
+ *                 default: COMMERCIAL
+ *               area:
+ *                 type: number
+ *                 description: Площадь в м²
+ *     parameters:
+ *       - in: query
+ *         name: mode
+ *         schema:
+ *           type: string
+ *           enum: [single, multi-agent]
+ *         description: Режим генерации (multi-agent использует 5 AI агентов)
+ *     responses:
+ *       200:
+ *         description: Сгенерированная смета
+ *       503:
+ *         description: AI сервис недоступен
+ */
 router.post('/generate', async (req: Request, res: Response) => {
   try {
     const validatedInput = GenerateEstimateRequestSchema.parse(req.body)
 
-    // Check if GOOGLE_AI_API_KEY is configured
+    // Check if GOOGLE_AI_API_KEY is configured - if not, use demo mode
     if (!process.env.GOOGLE_AI_API_KEY) {
-      return res.status(503).json({
-        error: 'AI service unavailable',
-        message: 'AI generation service is not configured. Please contact support.',
+      console.log('AI API key not configured, using demo mode for:', validatedInput.description)
+      
+      // Generate demo estimate based on description
+      const area = validatedInput.area || 100
+      const demoItems = generateDemoEstimate(validatedInput.description, area)
+      
+      return res.json({
+        success: true,
+        data: {
+          items: demoItems,
+          subtotal: demoItems.reduce((sum, item) => sum + item.total, 0),
+          parsed: {
+            projectType: 'ремонт',
+            totalArea: area,
+            works: demoItems.filter(i => i.category === 'work').map(i => ({
+              description: i.name,
+              category: 'general',
+              estimatedQuantity: i.quantity,
+              unit: i.unit,
+            })),
+          },
+          mode: 'demo',
+        },
       })
     }
 
-    const result = await generateEstimate(validatedInput)
+    // Load AI modules
+    const aiLoaded = await loadAIModules()
+    if (!aiLoaded) {
+      return res.status(503).json({
+        error: 'AI service unavailable',
+        message: 'AI generation service is not configured.',
+      })
+    }
+
+    const { mode } = req.query
+    const result = mode === 'multi-agent' 
+      ? await multiAgentEstimateFlow(validatedInput)
+      : await generateEstimate(validatedInput)
 
     res.json({
       success: true,
@@ -385,7 +487,12 @@ router.post('/voice/parse', async (req: Request, res: Response) => {
     // Use AI parsing if available and requested
     if (useAI && process.env.GOOGLE_AI_API_KEY) {
       try {
-        parsedCommand = await parseVoiceCommand({ command, context })
+        await loadAIModules()
+        if (parseVoiceCommand) {
+          parsedCommand = await parseVoiceCommand({ command, context })
+        } else {
+          parsedCommand = parseVoiceCommandLocal(command)
+        }
       } catch (aiError) {
         console.warn('AI parsing failed, falling back to local parsing:', aiError)
         parsedCommand = parseVoiceCommandLocal(command)
@@ -450,7 +557,8 @@ router.post('/blueprint/analyze', async (req: Request, res: Response) => {
     }
 
     // Check if AI is configured
-    if (!process.env.GOOGLE_AI_API_KEY) {
+    const aiLoaded = await loadAIModules()
+    if (!aiLoaded || !analyzeBlueprint) {
       return res.status(503).json({
         error: 'AI service unavailable',
         message: 'Blueprint analysis requires AI service. Please provide manualRooms instead.',
@@ -986,5 +1094,215 @@ router.post('/ml/insights', async (req: Request, res: Response) => {
     })
   }
 })
+
+// Helper function: Generate demo estimate
+function generateDemoEstimate(description: string, area: number) {
+  const lowerDesc = description.toLowerCase()
+  const items = []
+  
+  // Detect work types from description
+  if (lowerDesc.includes('штукатур')) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Штукатурка гипсовая Knauf Rotband 30кг',
+        unit: 'мешок',
+        quantity: Math.ceil(area * 8.5 / 30),
+        price: 450,
+        total: Math.ceil(area * 8.5 / 30) * 450,
+        category: 'material',
+        code: 'MAT-001',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Грунтовка глубокого проникновения',
+        unit: 'л',
+        quantity: Math.ceil(area * 0.2),
+        price: 120,
+        total: Math.ceil(area * 0.2) * 120,
+        category: 'material',
+        code: 'MAT-002',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Маяки штукатурные 6мм',
+        unit: 'шт',
+        quantity: Math.ceil(area / 2),
+        price: 35,
+        total: Math.ceil(area / 2) * 35,
+        category: 'material',
+        code: 'MAT-003',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Штукатурка стен по маякам',
+        unit: 'м²',
+        quantity: area,
+        price: 650,
+        total: area * 650,
+        category: 'work',
+        code: 'FER-15-02-019-01',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Грунтование поверхности',
+        unit: 'м²',
+        quantity: area,
+        price: 80,
+        total: area * 80,
+        category: 'work',
+        code: 'FER-15-04-005-01',
+      }
+    )
+  }
+  
+  if (lowerDesc.includes('покраск') || lowerDesc.includes('красить')) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Краска водоэмульсионная',
+        unit: 'л',
+        quantity: Math.ceil(area * 0.15),
+        price: 350,
+        total: Math.ceil(area * 0.15) * 350,
+        category: 'material',
+        code: 'MAT-010',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Покраска стен в 2 слоя',
+        unit: 'м²',
+        quantity: area,
+        price: 180,
+        total: area * 180,
+        category: 'work',
+        code: 'FER-15-04-025-01',
+      }
+    )
+  }
+  
+  if (lowerDesc.includes('шпакл')) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Шпаклевка финишная',
+        unit: 'кг',
+        quantity: Math.ceil(area * 1.2),
+        price: 45,
+        total: Math.ceil(area * 1.2) * 45,
+        category: 'material',
+        code: 'MAT-005',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Шпаклевка стен под покраску',
+        unit: 'м²',
+        quantity: area,
+        price: 280,
+        total: area * 280,
+        category: 'work',
+        code: 'FER-15-04-010-01',
+      }
+    )
+  }
+  
+  if (lowerDesc.includes('ламинат')) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Ламинат 32 класс',
+        unit: 'м²',
+        quantity: Math.ceil(area * 1.1),
+        price: 850,
+        total: Math.ceil(area * 1.1) * 850,
+        category: 'material',
+        code: 'MAT-020',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Подложка под ламинат',
+        unit: 'м²',
+        quantity: area,
+        price: 80,
+        total: area * 80,
+        category: 'material',
+        code: 'MAT-021',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Укладка ламината',
+        unit: 'м²',
+        quantity: area,
+        price: 450,
+        total: area * 450,
+        category: 'work',
+        code: 'FER-11-01-027-01',
+      }
+    )
+  }
+  
+  if (lowerDesc.includes('плитк')) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Плитка керамическая',
+        unit: 'м²',
+        quantity: Math.ceil(area * 1.1),
+        price: 1200,
+        total: Math.ceil(area * 1.1) * 1200,
+        category: 'material',
+        code: 'MAT-030',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Клей плиточный',
+        unit: 'кг',
+        quantity: Math.ceil(area * 5),
+        price: 25,
+        total: Math.ceil(area * 5) * 25,
+        category: 'material',
+        code: 'MAT-031',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Укладка плитки',
+        unit: 'м²',
+        quantity: area,
+        price: 1200,
+        total: area * 1200,
+        category: 'work',
+        code: 'FER-11-01-036-01',
+      }
+    )
+  }
+  
+  // Default items if nothing specific detected
+  if (items.length === 0) {
+    items.push(
+      {
+        id: crypto.randomUUID(),
+        name: 'Общестроительные работы',
+        unit: 'м²',
+        quantity: area,
+        price: 500,
+        total: area * 500,
+        category: 'work',
+        code: 'FER-01-01-001-01',
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Материалы общестроительные',
+        unit: 'комплект',
+        quantity: 1,
+        price: area * 200,
+        total: area * 200,
+        category: 'material',
+        code: 'MAT-100',
+      }
+    )
+  }
+  
+  return items
+}
 
 export default router

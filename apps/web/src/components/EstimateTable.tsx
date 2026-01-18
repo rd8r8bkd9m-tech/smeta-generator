@@ -15,6 +15,7 @@ interface EstimateItem {
 interface EstimateTableProps {
   items: EstimateItem[]
   onUpdateQuantity: (id: string, quantity: number) => void
+  onUpdatePrice?: (id: string, price: number) => void
   onRemoveItem: (id: string) => void
 }
 

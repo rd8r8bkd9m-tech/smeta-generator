@@ -13,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -26,7 +26,7 @@ services:
     container_name: smeta-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -46,10 +46,10 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/smeta_pro
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 4000
     ports:
-      - "4000:4000"
+      - "4001:4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
     environment:
       VITE_API_URL: http://api:4000/api
     ports:
-      - "3000:80"
+      - "3005:80"
     depends_on:
       - api
     healthcheck:

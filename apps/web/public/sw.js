@@ -1,45 +1,52 @@
-/* eslint-disable no-restricted-globals */
 /* Service Worker for SMETA PRO PWA */
 
-const CACHE_NAME = 'smeta-pro-v1'
+const CACHE_NAME = 'smeta-pro-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-]
+  '/icons/icon.svg',
+];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Service Worker: Caching static assets')
-      return cache.addAll(STATIC_ASSETS)
+      console.log('[Service Worker] Caching static assets');
+      return cache.addAll(STATIC_ASSETS).catch(err => {
+        console.error('[Service Worker] Caching failed:', err);
+      });
     })
-  )
-  self.skipWaiting()
-})
+  );
+  self.skipWaiting();
+});
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
           .filter((cacheName) => cacheName !== CACHE_NAME)
-          .map((cacheName) => caches.delete(cacheName))
-      )
+          .map((cacheName) => {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+      );
     })
-  )
-  self.clients.claim()
-})
+  );
+  return self.clients.claim();
+});
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  const { request } = event
+  const request = event.request;
 
   // Skip cross-origin requests
   if (!request.url.startsWith(self.location.origin)) {
-    return
+    return;
   }
 
   // Skip API requests - always go to network
@@ -49,10 +56,10 @@ self.addEventListener('fetch', (event) => {
         return new Response(
           JSON.stringify({ error: 'Offline', message: 'Нет подключения к интернету' }),
           { headers: { 'Content-Type': 'application/json' } }
-        )
+        );
       })
-    )
-    return
+    );
+    return;
   }
 
   // For navigation requests, try network first, fall back to cache
@@ -60,86 +67,90 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache the response
-          const responseClone = response.clone()
+          const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone)
-          })
-          return response
+            cache.put(request, responseClone);
+          });
+          return response;
         })
         .catch(() => {
           return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match('/')
-          })
+            return cachedResponse || caches.match('/');
+          });
         })
-    )
-    return
+    );
+    return;
   }
 
   // For other requests, try cache first, fall back to network
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Update cache in background
-        fetch(request).then((response) => {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, response)
-          })
-        })
-        return cachedResponse
+        return cachedResponse;
       }
 
       return fetch(request).then((response) => {
-        // Cache successful responses
-        if (response.ok) {
-          const responseClone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone)
-          })
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
         }
-        return response
-      })
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseToCache);
+        });
+
+        return response;
+      }).catch(err => {
+        console.warn('[Service Worker] Fetch failed for:', request.url, err);
+        // Fallback for images or other assets if needed
+      });
     })
-  )
-})
+  );
+});
 
 // Background sync for offline data
-self.addEventListener('sync', function(event) {
+self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-estimates') {
-    event.waitUntil(syncEstimates())
+    console.log('[Service Worker] Background sync triggered for estimates');
   }
-})
-
-async function syncEstimates() {
-  // Sync pending offline estimates with the server
-  // This will be called when the device comes back online
-  try {
-    // Future implementation: Read from IndexedDB and POST to server
-    console.log('Service Worker: Background sync triggered for estimates')
-  } catch (error) {
-    console.error('Service Worker: Sync failed', error)
-  }
-}
+});
 
 // Push notifications
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {}
-  const title = data.title || 'SMETA PRO'
-  const options = {
-    body: data.body || 'Новое уведомление',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    data: data.url || '/',
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    console.error('[Service Worker] Error parsing push data', e);
   }
 
-  event.waitUntil(self.registration.showNotification(title, options))
-})
+  const title = data.title || 'SMETA PRO';
+  const options = {
+    body: data.body || 'Новое уведомление',
+    icon: '/icons/icon.svg',
+    badge: '/icons/icon.svg',
+    data: { url: data.url || '/' },
+  };
+
+  if (self.registration && self.registration.showNotification) {
+    event.waitUntil(self.registration.showNotification(title, options));
+  }
+});
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
+  event.notification.close();
+  const urlToOpen = event.notification.data ? event.notification.data.url : '/';
   event.waitUntil(
-    self.clients.openWindow(event.notification.data || '/')
-  )
-})
-
-export {}
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

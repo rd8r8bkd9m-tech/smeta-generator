@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Calculator, Home, FolderOpen, Users, Moon, Sun, Menu, X, Zap } from 'lucide-react'
+import { Calculator, Home, FolderOpen, Users, FileStack, Moon, Sun, Menu, X, Zap } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../store/useStore'
 
@@ -8,6 +8,7 @@ const navItems = [
   { path: '/', label: 'Главная', icon: Home },
   { path: '/calculator', label: 'Калькулятор', icon: Calculator },
   { path: '/projects', label: 'Проекты', icon: FolderOpen },
+  { path: '/templates', label: 'Шаблоны', icon: FileStack },
   { path: '/clients', label: 'Клиенты', icon: Users },
 ]
 

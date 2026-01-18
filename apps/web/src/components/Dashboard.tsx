@@ -24,6 +24,7 @@ interface RecentEstimate {
   date: string
   status: 'draft' | 'completed' | 'in_progress'
   type: 'FER' | 'COMMERCIAL' | 'MIXED'
+  projectId?: string
 }
 
 interface StatCard {
@@ -37,17 +38,30 @@ interface StatCard {
   suffix?: string
 }
 
-/**
- * Demo data for dashboard display.
- * TODO: Replace with API integration in production.
- * This data demonstrates the expected format from the backend.
- */
-const DEMO_ESTIMATES: RecentEstimate[] = [
-  { id: '1', name: 'Ремонт квартиры 60м²', total: 485000, date: '2024-01-15', status: 'completed', type: 'COMMERCIAL' },
-  { id: '2', name: 'Отделка офиса 150м²', total: 1250000, date: '2024-01-14', status: 'in_progress', type: 'FER' },
-  { id: '3', name: 'Косметический ремонт', total: 120000, date: '2024-01-13', status: 'draft', type: 'MIXED' },
-  { id: '4', name: 'Капремонт ванной', total: 350000, date: '2024-01-12', status: 'completed', type: 'COMMERCIAL' },
-]
+interface ProjectSummary {
+  id: string
+  status: 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'ARCHIVED'
+  createdAt: string
+}
+
+interface ClientSummary {
+  id: string
+  createdAt: string
+}
+
+interface EstimateSummary {
+  id: string
+  name: string
+  total: number
+  createdAt: string
+  updatedAt: string
+  type: 'FER' | 'COMMERCIAL' | 'MIXED'
+  project?: ProjectSummary | null
+  projectId?: string | null
+}
+
+const API_URL = '/api'
+const RECENT_DAYS = 30
 
 const quickActions = [
   { label: 'Новая смета', icon: Calculator, path: '/calculator', gradient: 'from-orange-500 via-orange-500 to-amber-500', iconBg: 'bg-white/20' },
@@ -59,6 +73,11 @@ const quickActions = [
 export default function Dashboard() {
   // Memoize current time to prevent unnecessary re-renders
   const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [clients, setClients] = useState<ClientSummary[]>([])
+  const [estimates, setEstimates] = useState<EstimateSummary[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   // Update time every minute
   useEffect(() => {
@@ -68,48 +87,142 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
   
-  // Use demo data - in production, this would come from API
-  const recentEstimates = DEMO_ESTIMATES
-  
-  const stats: StatCard[] = useMemo(() => [
-    {
-      title: 'Всего смет',
-      value: 24,
-      change: 12,
-      changeLabel: 'за месяц',
-      icon: FileText,
-      gradient: 'from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30',
-      iconGradient: 'from-orange-500 to-amber-500',
-    },
-    {
-      title: 'Общая сумма',
-      value: 4850000,
-      change: 8,
-      changeLabel: 'рост',
-      icon: TrendingUp,
-      gradient: 'from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30',
-      iconGradient: 'from-emerald-500 to-teal-500',
-      suffix: ' ₽',
-    },
-    {
-      title: 'Активные проекты',
-      value: 7,
-      change: -2,
-      changeLabel: 'изменение',
-      icon: FolderOpen,
-      gradient: 'from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30',
-      iconGradient: 'from-blue-500 to-cyan-500',
-    },
-    {
-      title: 'Клиентов',
-      value: 15,
-      change: 3,
-      changeLabel: 'новых',
-      icon: Users,
-      gradient: 'from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30',
-      iconGradient: 'from-violet-500 to-purple-500',
-    },
-  ], [])
+  useEffect(() => {
+    let isMounted = true
+    
+    const loadDashboard = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const [projectsRes, clientsRes, estimatesRes] = await Promise.all([
+          fetch(`${API_URL}/projects`),
+          fetch(`${API_URL}/clients`),
+          fetch(`${API_URL}/calculator/estimates`),
+        ])
+
+        if (!projectsRes.ok || !clientsRes.ok || !estimatesRes.ok) {
+          throw new Error('Не удалось загрузить данные')
+        }
+
+        const [projectsData, clientsData, estimatesData] = await Promise.all([
+          projectsRes.json(),
+          clientsRes.json(),
+          estimatesRes.json(),
+        ])
+
+        if (!isMounted) return
+        setProjects(projectsData)
+        setClients(clientsData)
+        setEstimates(estimatesData)
+      } catch (err) {
+        if (!isMounted) return
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки данных')
+      } finally {
+        if (!isMounted) return
+        setIsLoading(false)
+      }
+    }
+
+    loadDashboard()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const recentEstimates = useMemo(() => {
+    const sorted = [...estimates].sort((a, b) => {
+      const aDate = new Date(a.updatedAt || a.createdAt).getTime()
+      const bDate = new Date(b.updatedAt || b.createdAt).getTime()
+      return bDate - aDate
+    })
+
+    return sorted.slice(0, 4).map((estimate) => {
+      const projectStatus = estimate.project?.status
+      const status: RecentEstimate['status'] =
+        projectStatus === 'IN_PROGRESS'
+          ? 'in_progress'
+          : projectStatus === 'COMPLETED'
+            ? 'completed'
+            : estimate.total > 0
+              ? 'completed'
+              : 'draft'
+
+      return {
+        id: estimate.id,
+        name: estimate.name,
+        total: estimate.total || 0,
+        date: estimate.updatedAt || estimate.createdAt,
+        status,
+        type: estimate.type || 'COMMERCIAL',
+        projectId: estimate.projectId || estimate.project?.id || undefined,
+      }
+    })
+  }, [estimates])
+
+  const stats: StatCard[] = useMemo(() => {
+    const since = new Date()
+    since.setDate(since.getDate() - RECENT_DAYS)
+
+    const totalEstimates = estimates.length
+    const totalProjects = projects.length
+    const totalClients = clients.length
+
+    const recentEstimatesCount = estimates.filter(e => new Date(e.createdAt) >= since).length
+    const recentProjectsCount = projects.filter(p => new Date(p.createdAt) >= since).length
+    const recentClientsCount = clients.filter(c => new Date(c.createdAt) >= since).length
+
+    const totalAmount = estimates.reduce((sum, e) => sum + (e.total || 0), 0)
+    const recentAmount = estimates
+      .filter(e => new Date(e.createdAt) >= since)
+      .reduce((sum, e) => sum + (e.total || 0), 0)
+
+    const activeProjects = projects.filter(p => p.status === 'IN_PROGRESS').length
+
+    const estimateChange = totalEstimates ? Math.round((recentEstimatesCount / totalEstimates) * 100) : 0
+    const amountChange = totalAmount ? Math.round((recentAmount / totalAmount) * 100) : 0
+    const projectChange = totalProjects ? Math.round((recentProjectsCount / totalProjects) * 100) : 0
+    const clientChange = totalClients ? Math.round((recentClientsCount / totalClients) * 100) : 0
+
+    return [
+      {
+        title: 'Всего смет',
+        value: totalEstimates,
+        change: estimateChange,
+        changeLabel: 'за месяц',
+        icon: FileText,
+        gradient: 'from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30',
+        iconGradient: 'from-orange-500 to-amber-500',
+      },
+      {
+        title: 'Общая сумма',
+        value: totalAmount,
+        change: amountChange,
+        changeLabel: 'за месяц',
+        icon: TrendingUp,
+        gradient: 'from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30',
+        iconGradient: 'from-emerald-500 to-teal-500',
+        suffix: ' ₽',
+      },
+      {
+        title: 'Активные проекты',
+        value: activeProjects,
+        change: projectChange,
+        changeLabel: 'за месяц',
+        icon: FolderOpen,
+        gradient: 'from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30',
+        iconGradient: 'from-blue-500 to-cyan-500',
+      },
+      {
+        title: 'Клиентов',
+        value: totalClients,
+        change: clientChange,
+        changeLabel: 'за месяц',
+        icon: Users,
+        gradient: 'from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30',
+        iconGradient: 'from-violet-500 to-purple-500',
+      },
+    ]
+  }, [estimates, projects, clients])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -157,11 +270,14 @@ export default function Dashboard() {
         <div className="relative p-8 md:p-10">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div>
-              <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg shadow-orange-500/30">
                   <Rocket className="w-5 h-5 text-white" />
                 </div>
-                <Badge variant="gradient" size="sm">Активный пользователь</Badge>
+            <Badge variant="gradient" size="sm">Активный пользователь</Badge>
+            {isLoading && (
+              <Badge variant="default" size="sm">Синхронизация...</Badge>
+            )}
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-3 tracking-tight">
                 Добро пожаловать в{' '}
@@ -189,6 +305,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <GlassCard className="p-4 border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300">
+          {error}
+        </GlassCard>
+      )}
 
       {/* Stats Grid - Premium Bento Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -304,49 +426,56 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {recentEstimates.map((estimate, index) => {
-              const statusConfig = getStatusBadge(estimate.status)
-              const typeConfig = getTypeBadge(estimate.type)
-              return (
-                <Link
-                  key={estimate.id}
-                  to={`/projects/${estimate.id}`}
-                  className={clsx(
-                    'group flex items-center justify-between p-5',
-                    'hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
-                    'transition-all duration-200 stagger-item'
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                        {estimate.name}
+            {recentEstimates.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+                Пока нет смет. Создайте первую смету в калькуляторе.
+              </div>
+            ) : (
+              recentEstimates.map((estimate, index) => {
+                const statusConfig = getStatusBadge(estimate.status)
+                const typeConfig = getTypeBadge(estimate.type)
+                const estimateLink = `/calculator?estimateId=${estimate.id}${estimate.projectId ? `&projectId=${estimate.projectId}` : ''}`
+                return (
+                  <Link
+                    key={estimate.id}
+                    to={estimateLink}
+                    className={clsx(
+                      'group flex items-center justify-between p-5',
+                      'hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
+                      'transition-all duration-200 stagger-item'
+                    )}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                          {estimate.name}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Badge variant={typeConfig.variant} size="sm">
+                            {typeConfig.label}
+                          </Badge>
+                          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                            {formatDate(estimate.date)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Badge variant={typeConfig.variant} size="sm">
-                          {typeConfig.label}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-bold text-zinc-900 dark:text-white">
+                          {formatCurrency(estimate.total)}
+                        </div>
+                        <Badge variant={statusConfig.variant} size="sm" className="mt-1">
+                          {statusConfig.label}
                         </Badge>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {formatDate(estimate.date)}
-                        </span>
                       </div>
+                      <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-bold text-zinc-900 dark:text-white">
-                        {formatCurrency(estimate.total)}
-                      </div>
-                      <Badge variant={statusConfig.variant} size="sm" className="mt-1">
-                        {statusConfig.label}
-                      </Badge>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
-                  </div>
-                </Link>
-              )
-            })}
+                  </Link>
+                )
+              })
+            )}
           </div>
         </GlassCard>
 

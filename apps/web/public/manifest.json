@@ -1,5 +1,5 @@
 {
-  "name": "DeniDom",
+  "name": "DeniDom Professional",
   "short_name": "DeniDom",
   "description": "Профессиональная система сметных расчетов",
   "start_url": "/",
@@ -7,6 +7,9 @@
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "ru",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -47,6 +50,37 @@
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "DeniDom - Главный экран"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Новая смета",
+      "short_name": "Смета",
+      "description": "Создать новую смету",
+      "url": "/calculator",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Шаблоны",
+      "short_name": "Шаблоны",
+      "description": "Выбрать шаблон сметы",
+      "url": "/templates",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ]
 }

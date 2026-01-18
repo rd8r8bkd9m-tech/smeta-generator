@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Sparkles, Loader2, AlertCircle, Wand2, Mic, MicOff, History, X, Building, Home, Briefcase, Wrench } from 'lucide-react'
-import { GlassCard } from '../design-system/components'
+import { GlassCard, Badge } from '../design-system/components'
 import clsx from 'clsx'
 import type { GeneratedEstimate } from '../types/estimate'
 
@@ -56,6 +56,7 @@ const MAX_HISTORY = 5
 export default function AIEstimateGenerator({ onEstimateGenerated, className }: AIEstimateGeneratorProps) {
   const [description, setDescription] = useState('')
   const [estimateType, setEstimateType] = useState<'FER' | 'COMMERCIAL' | 'MIXED'>('COMMERCIAL')
+  const [deepAnalysis, setDeepAnalysis] = useState(true)
   const [area, setArea] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -170,7 +171,12 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
     saveToHistory(description.trim())
 
     try {
-      const response = await fetch('/api/ai/generate', {
+      const url = new URL('/api/ai/generate', window.location.origin)
+      if (deepAnalysis) {
+        url.searchParams.append('mode', 'multi-agent')
+      }
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -444,6 +450,26 @@ export default function AIEstimateGenerator({ onEstimateGenerated, className }: 
               min="1"
               step="0.1"
             />
+          </div>
+        </div>
+
+        {/* Deep Analysis Toggle */}
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-900/20">
+          <input
+            type="checkbox"
+            id="deepAnalysis"
+            checked={deepAnalysis}
+            onChange={(e) => setDeepAnalysis(e.target.checked)}
+            className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+          />
+          <div className="flex-1">
+            <label htmlFor="deepAnalysis" className="text-sm font-semibold text-secondary-900 dark:text-white flex items-center gap-2">
+              Глубокий анализ (Multi-agent AI)
+              <Badge variant="gradient" size="sm">Рекомендуется</Badge>
+            </label>
+            <p className="text-xs text-secondary-500 dark:text-secondary-400 mt-0.5">
+              Использование 5 ИИ-агентов (Инженер, Архитектор, Прораб и др.) для максимальной точности.
+            </p>
           </div>
         </div>
 

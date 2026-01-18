@@ -387,5 +387,3 @@ export async function trainWorkClassifier(
     }
   }
 }
-
-export { LinearRegression, LogisticRegression }

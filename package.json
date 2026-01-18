@@ -12,6 +12,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "turbo run clean && rm -rf node_modules",
     "dev:web": "pnpm --filter web dev",
+    "dev:mobile": "pnpm --filter mobile-web dev",
     "dev:api": "pnpm --filter api dev",
     "dev:bot": "pnpm --filter telegram-bot dev"
   },

@@ -22,28 +22,31 @@ model User {
   estimates      Estimate[]
   customPrices   CustomPrice[]
   priceTemplates PriceTemplate[]
+  changeHistory  ChangeHistory[]
+  integrations   Integration[]
+  documents      Document[]
 
   @@map("users")
 }
 
 model Client {
-  id           String     @id @default(cuid())
-  name         String
-  type         ClientType @default(COMPANY)
-  contact      String?
-  phone        String?
-  email        String?
-  address      String?
-  inn          String?
-  kpp          String?
-  notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  projects     Project[]
+  id        String     @id @default(cuid())
+  name      String
+  type      ClientType @default(COMPANY)
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  inn       String?
+  kpp       String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projects Project[]
 
   @@map("clients")
 }
@@ -57,13 +60,13 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  clientId    String?
-  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  
-  estimates   Estimate[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  estimates Estimate[]
 
   @@map("projects")
 }
@@ -82,18 +85,20 @@ model Estimate {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  projectId   String?
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  documents Document[]
 
   @@map("estimates")
 }
 
 model Normative {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String        @id @default(cuid())
+  code        String        @unique
   name        String
   unit        String
   price       Float
@@ -103,10 +108,10 @@ model Normative {
   materials   Json?
   labor       Json?
   equipment   Json?
-  validFrom   DateTime @default(now())
+  validFrom   DateTime      @default(now())
   validTo     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   commercialPrices CommercialPrice[]
   customPrices     CustomPrice[]
@@ -115,20 +120,78 @@ model Normative {
 }
 
 model Material {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String    @id @default(cuid())
+  code        String    @unique
   name        String
   unit        String
   price       Float
   category    String?
   supplier    String?
   description String?
-  validFrom   DateTime @default(now())
+  validFrom   DateTime  @default(now())
   validTo     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("materials")
+}
+
+model ChangeHistory {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  action    String
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("change_history")
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  type      String // webhook, email, crm, google_sheets
+  config    Json // JSON config
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
+}
+
+model Document {
+  id         String    @id @default(cuid())
+  filename   String
+  url        String
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  estimateId String?
+  estimate   Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+  uploadedAt DateTime  @default(now())
+
+  @@map("documents")
+}
+
+model WorkDirectory {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  unit        String
+  price       Float
+  description String?
+
+  @@map("work_directory")
+}
+
+model MaterialDirectory {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  unit        String
+  price       Float
+  description String?
+
+  @@map("material_directory")
 }
 
 enum Role {

@@ -5,6 +5,7 @@ import CalculatorPage from './pages/CalculatorPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectDetailsPage from './pages/ProjectDetailsPage'
 import ClientsPage from './pages/ClientsPage'
+import TemplatesPage from './pages/TemplatesPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -18,6 +19,7 @@ function App() {
       <Route path="/projects" element={<Layout><ProjectsPage /></Layout>} />
       <Route path="/projects/:id" element={<Layout><ProjectDetailsPage /></Layout>} />
       <Route path="/clients" element={<Layout><ClientsPage /></Layout>} />
+      <Route path="/templates" element={<Layout><TemplatesPage /></Layout>} />
     </Routes>
   )
 }

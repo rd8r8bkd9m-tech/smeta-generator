@@ -2,8 +2,44 @@ import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma.js'
+import { getOrCreateDemoUser } from '../lib/demoUser.js'
 
 const router: RouterType = Router()
+
+async function updateProjectTotal(projectId: string) {
+  const estimates = await prisma.estimate.findMany({
+    where: { projectId },
+    select: { total: true },
+  })
+  const totalAmount = estimates.reduce((sum, est) => sum + (est.total || 0), 0)
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { totalAmount },
+  })
+}
+
+/**
+ * @openapi
+ * tags:
+ *   name: Calculator
+ *   description: Управление расчетами и сметами
+ */
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     CalculateItem:
+ *       type: object
+ *       required: [id, name, unit, quantity, price]
+ *       properties:
+ *         id: { type: string }
+ *         name: { type: string }
+ *         unit: { type: string }
+ *         quantity: { type: number }
+ *         price: { type: number }
+ *         coefficient: { type: number }
+ */
 
 // Validation schemas
 const CalculateItemSchema = z.object({
@@ -25,6 +61,27 @@ const CalculateRequestSchema = z.object({
   }).optional(),
 })
 
+/**
+ * @openapi
+ * /api/calculator/calculate:
+ *   post:
+ *     summary: Рассчитать смету
+ *     tags: [Calculator]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/CalculateItem'
+ *     responses:
+ *       200:
+ *         description: Результаты расчета
+ */
 // Calculate estimate
 router.post('/calculate', async (req, res) => {
   try {
@@ -76,7 +133,8 @@ router.get('/templates', async (_req, res) => {
     {
       id: 'renovation-basic',
       name: 'Базовый ремонт квартиры',
-      description: 'Шаблон для типового ремонта квартиры',
+      description: 'Шаблон для типового ремонта квартиры, включая демонтаж, штукатурку и отделку.',
+      category: 'Жилая недвижимость',
       items: [
         { id: 'work-1', name: 'Демонтаж старых покрытий', unit: 'м²', price: 150 },
         { id: 'work-2', name: 'Штукатурка стен', unit: 'м²', price: 450 },
@@ -88,13 +146,53 @@ router.get('/templates', async (_req, res) => {
     {
       id: 'renovation-premium',
       name: 'Премиум ремонт квартиры',
-      description: 'Шаблон для премиального ремонта',
+      description: 'Высококачественный ремонт с использованием премиальных материалов и сложных технологий.',
+      category: 'Жилая недвижимость',
       items: [
         { id: 'work-1', name: 'Демонтаж старых покрытий', unit: 'м²', price: 200 },
         { id: 'work-2', name: 'Выравнивание стен (штукатурка по маякам)', unit: 'м²', price: 650 },
         { id: 'work-3', name: 'Шпаклевка стен под покраску', unit: 'м²', price: 380 },
         { id: 'work-4', name: 'Покраска стен (2 слоя)', unit: 'м²', price: 280 },
         { id: 'work-5', name: 'Укладка паркетной доски', unit: 'м²', price: 550 },
+      ],
+    },
+    {
+      id: 'office-build',
+      name: 'Строительство офиса',
+      description: 'Полный цикл работ по созданию офисного пространства Open Space.',
+      category: 'Коммерческая недвижимость',
+      items: [
+        { id: 'work-1', name: 'Монтаж перегородок из ГКЛ', unit: 'м²', price: 850 },
+        { id: 'work-2', name: 'Устройство потолка Армстронг', unit: 'м²', price: 450 },
+        { id: 'work-3', name: 'Прокладка силового кабеля', unit: 'м.п.', price: 120 },
+        { id: 'work-4', name: 'Монтаж розеток и выключателей', unit: 'шт', price: 350 },
+        { id: 'work-5', name: 'Укладка ковролина', unit: 'м²', price: 400 },
+      ],
+    },
+    {
+      id: 'house-construction',
+      name: 'Строительство дома (коробка)',
+      description: 'Основные этапы строительства частного дома: фундамент, стены, кровля.',
+      category: 'Жилая недвижимость',
+      items: [
+        { id: 'work-1', name: 'Разработка грунта', unit: 'м³', price: 1200 },
+        { id: 'work-2', name: 'Устройство ленточного фундамента', unit: 'м³', price: 15000 },
+        { id: 'work-3', name: 'Кладка стен из газобетона', unit: 'м³', price: 4500 },
+        { id: 'work-4', name: 'Монтаж стропильной системы', unit: 'м²', price: 1800 },
+        { id: 'work-5', name: 'Устройство кровли (металлочерепица)', unit: 'м²', price: 950 },
+      ],
+    },
+    {
+      id: 'landscape-design',
+      name: 'Благоустройство территории',
+      description: 'Ландшафтные работы, укладка плитки и озеленение.',
+      category: 'Ландшафт',
+      items: [
+        { id: 'work-1', name: 'Планировка участка', unit: 'м²', price: 150 },
+        { id: 'work-2', name: 'Укладка тротуарной плитки', unit: 'м²', price: 1200 },
+        { id: 'work-3', name: 'Устройство газона', unit: 'м²', price: 350 },
+        { id: 'work-4', name: 'Посадка кустарников', unit: 'шт', price: 800 },
+        { id: 'work-5', name: 'Монтаж системы полива', unit: 'м.п.', price: 650 },
       ],
     },
   ]
@@ -105,27 +203,30 @@ router.get('/templates', async (_req, res) => {
 // Save estimate
 router.post('/estimates', async (req, res) => {
   try {
-    const { name, description, items, subtotal, overhead, profit, total, options, userId, projectId } = req.body
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required' })
-    }
-    
+    const { name, description, items, subtotal, overhead, profit, total, options, userId, projectId, type } = req.body
+
+    const validUserId = await getOrCreateDemoUser(userId)
+
     const estimate = await prisma.estimate.create({
       data: {
         name: name || 'Новая смета',
         description,
+        type: type || 'COMMERCIAL',
         items: items || [],
         subtotal: subtotal || 0,
         overhead: overhead || 0,
         profit: profit || 0,
         total: total || 0,
         options,
-        userId,
+        userId: validUserId,
         projectId,
       },
     })
-    
+
+    if (projectId) {
+      await updateProjectTotal(projectId)
+    }
+
     res.status(201).json(estimate)
   } catch (error) {
     console.error('Error creating estimate:', error)
@@ -187,18 +288,21 @@ router.get('/estimates/:id', async (req, res) => {
 router.put('/estimates/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, items, subtotal, overhead, profit, total, options, projectId } = req.body
-    
+    const { name, description, items, subtotal, overhead, profit, total, options, projectId, type } = req.body
+
     const existingEstimate = await prisma.estimate.findUnique({ where: { id } })
     if (!existingEstimate) {
       return res.status(404).json({ error: 'Estimate not found' })
     }
-    
+
+    const previousProjectId = existingEstimate.projectId
+
     const estimate = await prisma.estimate.update({
       where: { id },
       data: {
         name,
         description,
+        type,
         items,
         subtotal,
         overhead,
@@ -208,7 +312,14 @@ router.put('/estimates/:id', async (req, res) => {
         projectId,
       },
     })
-    
+
+    if (previousProjectId && previousProjectId !== estimate.projectId) {
+      await updateProjectTotal(previousProjectId)
+    }
+    if (estimate.projectId) {
+      await updateProjectTotal(estimate.projectId)
+    }
+
     res.json(estimate)
   } catch (error) {
     console.error('Error updating estimate:', error)
@@ -227,6 +338,10 @@ router.delete('/estimates/:id', async (req, res) => {
     }
     
     await prisma.estimate.delete({ where: { id } })
+
+    if (existingEstimate.projectId) {
+      await updateProjectTotal(existingEstimate.projectId)
+    }
     res.status(204).send()
   } catch (error) {
     console.error('Error deleting estimate:', error)

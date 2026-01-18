@@ -1,6 +1,7 @@
 import { Router, type Router as RouterType } from 'express'
 import { z } from 'zod'
 import prisma from '../lib/prisma.js'
+import { getOrCreateDemoUser } from '../lib/demoUser.js'
 
 const router: RouterType = Router()
 
@@ -10,7 +11,7 @@ const ProjectSchema = z.object({
   description: z.string().optional(),
   clientId: z.string().optional(),
   status: z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']).optional(),
-  userId: z.string(),
+  userId: z.string().optional(),
 })
 
 // Get all projects
@@ -63,12 +64,15 @@ router.post('/', async (req, res) => {
   try {
     const data = ProjectSchema.parse(req.body)
     
+    // Get or create demo user if userId is not valid
+    const validUserId = await getOrCreateDemoUser(data.userId)
+    
     const project = await prisma.project.create({
       data: {
         name: data.name,
         description: data.description,
         status: data.status || 'DRAFT',
-        userId: data.userId,
+        userId: validUserId,
         clientId: data.clientId,
       },
       include: {

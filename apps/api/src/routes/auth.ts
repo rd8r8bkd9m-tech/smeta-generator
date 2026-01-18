@@ -3,11 +3,26 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import jwt, { type SignOptions } from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
+import prisma from '../lib/prisma.js'
 
 const router: RouterType = Router()
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in environment variables')
+}
+
 const JWT_EXPIRES_IN = '7d'
+
+// Helper to generate JWT
+function generateToken(user: { id: string; email: string; name: string }): string {
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN }
+  return jwt.sign(
+    { id: user.id, email: user.email, name: user.name },
+    JWT_SECRET as string,
+    options
+  )
+}
 
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
@@ -30,26 +45,41 @@ const LoginSchema = z.object({
   password: z.string(),
 })
 
-// Mock users storage (in production, use Prisma)
-const users: Record<string, { id: string; email: string; name: string; password: string }> = {}
-
-// Helper to generate JWT
-function generateToken(user: { id: string; email: string; name: string }): string {
-  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN }
-  return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
-    JWT_SECRET,
-    options
-  )
-}
-
-// Register
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Регистрация нового пользователя
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, name]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *     responses:
+ *       201:
+ *         description: Пользователь успешно создан
+ *       400:
+ *         description: Ошибка валидации или пользователь уже существует
+ */
 router.post('/register', authLimiter, async (req, res) => {
   try {
     const { email, password, name } = RegisterSchema.parse(req.body)
     
     // Check if user exists
-    const existingUser = Object.values(users).find(u => u.email === email)
+    const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists' })
     }
@@ -58,14 +88,13 @@ router.post('/register', authLimiter, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10)
     
     // Create user
-    const user = {
-      id: `USR-${Date.now().toString(36).toUpperCase()}`,
-      email,
-      name,
-      password: hashedPassword,
-    }
-    
-    users[user.id] = user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+      },
+    })
     
     // Generate token
     const token = generateToken(user)
@@ -78,17 +107,42 @@ router.post('/register', authLimiter, async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation error', details: error.errors })
     }
-    throw error
+    console.error('Registration error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 
-// Login
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Авторизация пользователя
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Успешная авторизация
+ *       401:
+ *         description: Неверные учетные данные
+ */
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = LoginSchema.parse(req.body)
     
     // Find user
-    const user = Object.values(users).find(u => u.email === email)
+    const user = await prisma.user.findUnique({ where: { email } })
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
@@ -110,7 +164,8 @@ router.post('/login', authLimiter, async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation error', details: error.errors })
     }
-    throw error
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 

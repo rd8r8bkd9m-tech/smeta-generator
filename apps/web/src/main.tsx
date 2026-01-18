@@ -14,15 +14,27 @@ const queryClient = new QueryClient({
   },
 })
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Register service worker for PWA (both dev and prod for testing)
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('SW registered:', registration.scope)
+        console.log('✅ Service Worker registered:', registration.scope)
+        
+        // Check for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('🔄 New version available! Refresh to update.')
+              }
+            })
+          }
+        })
       })
       .catch((error) => {
-        console.log('SW registration failed:', error)
+        console.warn('⚠️ Service Worker registration failed:', error)
       })
   })
 }

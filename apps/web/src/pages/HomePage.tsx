@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calculator, FolderOpen, Users, TrendingUp, FileText, ArrowRight, Zap, Award, Wand2 } from 'lucide-react'
 import { GlassCard, AnimatedNumber, ProgressRing, Badge } from '../design-system/components'
@@ -43,14 +44,58 @@ const features = [
   },
 ]
 
-const stats = [
-  { value: 15000, suffix: '+', label: 'Позиций в базе' },
-  { value: 2024, suffix: '', label: 'Актуальные ФЕР' },
-  { value: 99.9, suffix: '%', label: 'Точность AI' },
-  { value: 24, suffix: '/7', label: 'Поддержка' },
+const initialStats = [
+  { value: 0, suffix: '', label: 'Смет' },
+  { value: 0, suffix: '', label: 'Проектов' },
+  { value: 0, suffix: '', label: 'Клиентов' },
+  { value: 0, suffix: ' ₽', label: 'Общий объем' },
 ]
 
 export default function HomePage() {
+  const [stats, setStats] = useState(initialStats)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadStats = async () => {
+      try {
+        const [projectsRes, clientsRes, estimatesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/clients'),
+          fetch('/api/calculator/estimates'),
+        ])
+
+        if (!projectsRes.ok || !clientsRes.ok || !estimatesRes.ok) {
+          return
+        }
+
+        const [projects, clients, estimates] = await Promise.all([
+          projectsRes.json(),
+          clientsRes.json(),
+          estimatesRes.json(),
+        ])
+
+        if (!isMounted) return
+
+        const totalAmount = estimates.reduce((sum: number, e: { total?: number }) => sum + (e.total || 0), 0)
+
+        setStats([
+          { value: estimates.length, suffix: '', label: 'Смет' },
+          { value: projects.length, suffix: '', label: 'Проектов' },
+          { value: clients.length, suffix: '', label: 'Клиентов' },
+          { value: totalAmount, suffix: ' ₽', label: 'Общий объем' },
+        ])
+      } catch {
+        // Silent fail, keep initial stats
+      }
+    }
+
+    loadStats()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   return (
     <div className="space-y-16 pb-8">
       {/* Dashboard Section */}

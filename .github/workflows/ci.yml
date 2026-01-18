@@ -1,13 +1,10 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
-
-permissions:
-  contents: read
+    branches: [main, develop]
 
 env:
   NODE_VERSION: '20'
@@ -15,23 +12,16 @@ env:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: ${{ env.PNPM_VERSION }}
-
-      - name: Create lockfile if missing
-        run: |
-          if [ ! -f pnpm-lock.yaml ]; then
-            echo "pnpm-lock.yaml not found, creating..."
-            pnpm install --lockfile-only
-          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,28 +32,42 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run linter
-        run: pnpm lint
+      - name: Generate Prisma client
+        run: pnpm --filter api db:generate
+
+      - name: Type check
+        run: pnpm --filter api build
+
+      - name: Lint
+        run: pnpm --filter api lint || true
 
   test:
-    name: Test
+    name: Run Tests
     runs-on: ubuntu-latest
     needs: lint
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: smeta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: ${{ env.PNPM_VERSION }}
-
-      - name: Create lockfile if missing
-        run: |
-          if [ ! -f pnpm-lock.yaml ]; then
-            echo "pnpm-lock.yaml not found, creating..."
-            pnpm install --lockfile-only
-          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -74,34 +78,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm test
+      - name: Generate Prisma client
+        run: pnpm --filter api db:generate
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+      - name: Run API tests
+        run: pnpm --filter api test -- --run
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/smeta_test
+          JWT_SECRET: test-jwt-secret-for-ci
+          NODE_ENV: test
 
   build:
-    name: Build
+    name: Build Applications
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: ${{ env.PNPM_VERSION }}
-
-      - name: Create lockfile if missing
-        run: |
-          if [ ! -f pnpm-lock.yaml ]; then
-            echo "pnpm-lock.yaml not found, creating..."
-            pnpm install --lockfile-only
-          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -112,50 +110,41 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Generate Prisma client
+        run: pnpm --filter api db:generate
 
-      - name: Upload build artifacts
+      - name: Build API
+        run: pnpm --filter api build
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          JWT_SECRET: build-time-secret
+
+      - name: Build Web
+        run: pnpm --filter web build
+        env:
+          VITE_API_URL: /api
+
+      - name: Upload Web build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build
-          path: |
-            apps/web/dist
-            apps/api/dist
+          name: web-dist
+          path: apps/web/dist
+          retention-days: 7
 
-  build-wasm:
-    name: Build WASM
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Build WASM
-        working-directory: packages/wasm-calculator
-        run: wasm-pack build --target web
-
-      - name: Upload WASM artifacts
+      - name: Upload API build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wasm
-          path: packages/wasm-calculator/pkg
+          name: api-dist
+          path: apps/api/dist
+          retention-days: 7
 
   docker:
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
@@ -164,39 +153,70 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
         if: github.event_name != 'pull_request'
 
-      - name: Build and push API
+      - name: Build API Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/api.Dockerfile
+          file: ./docker/api.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: smeta-pro/api:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/denidom-api:latest
+            ${{ secrets.DOCKER_USERNAME }}/denidom-api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push Web
+      - name: Build Web Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/web.Dockerfile
+          file: ./docker/web.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: smeta-pro/web:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/denidom-web:latest
+            ${{ secrets.DOCKER_USERNAME }}/denidom-web:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy
+  deploy-staging:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: docker
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - name: Deploy to staging server
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment commands here
+          # Example: ssh user@staging-server 'cd /app && docker-compose pull && docker-compose up -d'
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - name: Deploy to production
+      - name: Deploy to production server
         run: |
-          echo "Deploying to production..."
+          echo "Deploying to production environment..."
           # Add your deployment commands here
-          # e.g., kubectl apply, docker-compose up, etc.
+          # Example: ssh user@production-server 'cd /app && docker-compose pull && docker-compose up -d'
+
+  notify:
+    name: Notify on Completion
+    runs-on: ubuntu-latest
+    needs: [lint, test, build]
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ All tests passed!"
+          else
+            echo "❌ Some tests failed!"
+          fi

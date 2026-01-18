@@ -1,5 +1,6 @@
 import { Telegraf, Context, Markup } from 'telegraf'
 import dotenv from 'dotenv'
+import { generateEstimate, getEstimates } from './services/api.js'
 
 dotenv.config()
 
@@ -13,13 +14,14 @@ if (!BOT_TOKEN) {
 const bot = new Telegraf(BOT_TOKEN)
 
 // Session data storage (in production, use Redis or database)
-const sessions: Map<number, { items: unknown[]; step: string }> = new Map()
+const sessions: Map<number, { items: unknown[]; step: string; description?: string }> = new Map()
 
 // Start command
 bot.command('start', async (ctx: Context) => {
   const keyboard = Markup.keyboard([
-    ['📊 Новый расчет', '📋 Мои сметы'],
-    ['📚 Каталог работ', '❓ Помощь'],
+    ['🤖 AI Генерация', '📊 Новый расчет'],
+    ['📋 Мои сметы', '📚 Каталог работ'],
+    ['❓ Помощь'],
   ]).resize()
 
   await ctx.reply(
@@ -28,6 +30,97 @@ bot.command('start', async (ctx: Context) => {
     'Выберите действие:',
     keyboard
   )
+})
+
+// AI Generate command
+bot.command('generate', async (ctx: Context) => {
+  const chatId = ctx.chat?.id
+  if (!chatId) return
+
+  sessions.set(chatId, { items: [], step: 'waiting_for_description' })
+  await ctx.reply('Опишите объект и работы для AI-генерации сметы (минимум 10 символов):')
+})
+
+// Handle AI generation
+bot.on('text', async (ctx, next) => {
+  const chatId = ctx.chat?.id
+  if (!chatId) return next()
+
+  const session = sessions.get(chatId)
+  if (session?.step === 'waiting_for_description') {
+    const description = ctx.message.text
+    if (description.length < 10) {
+      await ctx.reply('Описание слишком короткое. Пожалуйста, опишите работы подробнее.')
+      return
+    }
+
+    await ctx.reply('🚀 Запускаю 5 ИИ-агентов для анализа... Это может занять до 30 секунд.')
+    
+    try {
+      const result = await generateEstimate(description)
+      if (result.success && result.data) {
+        const { items, subtotal } = result.data
+        let message = `✅ *Смета сгенерирована!*\n\n`
+        message += `💰 *Итого:* ${new Intl.NumberFormat('ru-RU').format(subtotal)} ₽\n\n`
+        message += `📋 *Основные позиции:*\n`
+        
+        items.slice(0, 10).forEach((item: any) => {
+          message += `• ${item.name}: ${item.quantity} ${item.unit} x ${item.price} ₽\n`
+        })
+        
+        if (items.length > 10) {
+          message += `...и еще ${items.length - 10} позиций\n`
+        }
+        
+        message += `\nПолную смету можно просмотреть в веб-панели.`
+        
+        await ctx.reply(message, { parse_mode: 'Markdown' })
+      } else {
+        await ctx.reply('❌ Не удалось сгенерировать смету. Попробуйте еще раз позже.')
+      }
+    } catch (error) {
+      console.error('AI Gen error:', error)
+      await ctx.reply('❌ Произошла ошибка при обращении к ИИ-сервису.')
+    }
+    
+    session.step = ''
+    sessions.set(chatId, session)
+    return
+  }
+  
+  if (ctx.message.text === '🤖 AI Генерация') {
+    return bot.handleUpdate(ctx.update) // Re-trigger command logic or just call command
+  }
+
+  return next()
+})
+
+// Update handle text messages for buttons
+bot.hears('🤖 AI Генерация', async (ctx) => {
+  const chatId = ctx.chat?.id
+  if (!chatId) return
+  sessions.set(chatId, { items: [], step: 'waiting_for_description' })
+  await ctx.reply('Опишите объект и работы для AI-генерации сметы (минимум 10 символов):')
+})
+
+bot.hears('📋 Мои сметы', async (ctx) => {
+  const userId = ctx.from?.id.toString()
+  if (!userId) return
+  
+  try {
+    const estimates = await getEstimates(userId)
+    if (estimates && estimates.length > 0) {
+      let message = `📋 *Ваши последние сметы:*\n\n`
+      estimates.slice(0, 5).forEach((e: any) => {
+        message += `• ${e.name} (${new Intl.NumberFormat('ru-RU').format(e.total)} ₽)\n`
+      })
+      await ctx.reply(message, { parse_mode: 'Markdown' })
+    } else {
+      await ctx.reply('У вас пока нет сохраненных смет.')
+    }
+  } catch (error) {
+    await ctx.reply('Не удалось загрузить список смет.')
+  }
 })
 
 // Help command

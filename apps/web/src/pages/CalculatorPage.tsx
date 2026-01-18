@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react'
-import { Search, Plus, Download, Save, Sparkles, Package, Hammer, Filter, Wand2 } from 'lucide-react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Search, Plus, Download, Save, Sparkles, Package, Hammer, Filter, Wand2, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 import EstimateTable from '../components/EstimateTable'
 import AIEstimateGenerator from '../components/AIEstimateGenerator'
 import EditableEstimateTable from '../components/EditableEstimateTable'
@@ -26,6 +27,17 @@ const catalogItems = [
 type FilterType = 'all' | 'work' | 'material'
 type ViewMode = 'manual' | 'ai'
 
+interface ProjectOption {
+  id: string
+  name: string
+  client?: { name: string } | null
+}
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+const API_URL = '/api'
+const DEMO_USER_ID = 'demo-user-001'
+
 export default function CalculatorPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
@@ -33,7 +45,123 @@ export default function CalculatorPage() {
   const [estimateItems, setEstimateItems] = useState<ManualEstimateItem[]>([])
   const [aiEstimateItems, setAiEstimateItems] = useState<AIEstimateItem[]>([])
   const [generatedEstimate, setGeneratedEstimate] = useState<GeneratedEstimate | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const { addNotification } = useStore()
+  const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [estimateName, setEstimateName] = useState('Новая смета')
+  const [estimateDescription, setEstimateDescription] = useState('')
+  const [estimateId, setEstimateId] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [isSaving, setIsSaving] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  const draftKey = useMemo(
+    () => (selectedProjectId ? `estimateDraft:${selectedProjectId}` : 'estimateDraft:local'),
+    [selectedProjectId]
+  )
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch(`${API_URL}/projects`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch projects')
+        }
+        const data = await response.json()
+        setProjects(data)
+      } catch (error) {
+        console.error('Failed to load projects:', error)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
+  useEffect(() => {
+    const templateId = searchParams.get('template')
+    if (templateId) {
+      loadTemplate(templateId)
+    }
+    const projectId = searchParams.get('projectId')
+    if (projectId) {
+      setSelectedProjectId(projectId)
+    }
+    const estimateParam = searchParams.get('estimateId')
+    if (estimateParam) {
+      setEstimateId(estimateParam)
+      loadEstimate(estimateParam)
+    }
+  }, [searchParams])
+
+  const loadTemplate = async (id: string) => {
+    try {
+      const response = await fetch('/api/calculator/templates')
+      const templates = await response.json()
+      const template = templates.find((t: any) => t.id === id)
+      
+      if (template) {
+        const manualItems: ManualEstimateItem[] = template.items.map((item: any) => ({
+          ...item,
+          quantity: item.quantity || 1,
+          total: item.quantity * item.price
+        }))
+        setEstimateItems(manualItems)
+        setEstimateName(template.name || 'Новая смета')
+        setEstimateDescription(template.description || '')
+        setViewMode('manual')
+        addNotification?.('success', `Применен шаблон: ${template.name}`)
+      }
+    } catch (error) {
+      console.error('Failed to load template:', error)
+    }
+  }
+
+  const loadEstimate = async (id: string) => {
+    try {
+      setLoadError(null)
+      const response = await fetch(`/api/calculator/estimates/${id}`)
+      if (!response.ok) {
+        throw new Error('Failed to load estimate')
+      }
+      const estimate = await response.json()
+      const rawItems = Array.isArray(estimate.items) ? estimate.items : []
+      const hasAiType = rawItems.some((item: any) => item.type === 'FER' || item.type === 'COMMERCIAL')
+
+      if (hasAiType) {
+        const aiItems = rawItems.map((item: any) => ({
+          ...item,
+          total: item.total ?? item.quantity * item.price,
+        }))
+        setAiEstimateItems(aiItems)
+        setViewMode('ai')
+        setGeneratedEstimate({
+          items: aiItems,
+          subtotal: aiItems.reduce((sum: number, item: any) => sum + (item.total ?? 0), 0),
+          parsed: { works: [] },
+        })
+      } else {
+        const manualItems = rawItems.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total ?? item.quantity * item.price,
+        }))
+        setEstimateItems(manualItems)
+        setViewMode('manual')
+      }
+
+      setEstimateName(estimate.name || 'Новая смета')
+      setEstimateDescription(estimate.description || '')
+      setSelectedProjectId(estimate.projectId || '')
+      addNotification?.('success', 'Смета загружена')
+    } catch (error) {
+      console.error('Failed to load estimate:', error)
+      setLoadError('Не удалось загрузить смету')
+    }
+  }
 
   const filteredCatalog = catalogItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
