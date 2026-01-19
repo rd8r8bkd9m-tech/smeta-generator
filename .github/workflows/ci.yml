@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -32,17 +32,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
+      - name: Generate Prisma Client
         run: pnpm --filter api db:generate
 
-      - name: Type check
+      - name: Lint API
+        run: pnpm --filter api lint
+
+      - name: Type Check API
         run: pnpm --filter api build
 
-      - name: Lint
-        run: pnpm --filter api lint || true
-
   test:
-    name: Run Tests
+    name: Tests
     runs-on: ubuntu-latest
     needs: lint
     services:
@@ -51,7 +51,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: smeta_test
+          POSTGRES_DB: test_db
         ports:
           - 5432:5432
         options: >-
@@ -61,7 +61,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -78,22 +78,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
+      - name: Generate Prisma Client
         run: pnpm --filter api db:generate
 
-      - name: Run API tests
-        run: pnpm --filter api test -- --run
+      - name: Run migrations
+        run: pnpm --filter api db:migrate:deploy
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/smeta_test
-          JWT_SECRET: test-jwt-secret-for-ci
-          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db?schema=public
+
+      - name: Run API tests
+        run: pnpm --filter api test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db?schema=public
+          JWT_SECRET: test-secret-key
 
   build:
-    name: Build Applications
+    name: Build
     runs-on: ubuntu-latest
-    needs: test
+    needs: lint
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -110,113 +114,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
+      - name: Generate Prisma Client
         run: pnpm --filter api db:generate
 
       - name: Build API
         run: pnpm --filter api build
-        env:
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
-          JWT_SECRET: build-time-secret
 
-      - name: Build Web
-        run: pnpm --filter web build
-        env:
-          VITE_API_URL: /api
+      - name: Build Mobile Web
+        run: pnpm --filter mobile-web build
 
-      - name: Upload Web build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist
-          path: apps/web/dist
-          retention-days: 7
-
-      - name: Upload API build artifacts
+      - name: Upload API artifacts
         uses: actions/upload-artifact@v4
         with:
           name: api-dist
           path: apps/api/dist
           retention-days: 7
 
-  docker:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Upload Mobile Web artifacts
+        uses: actions/upload-artifact@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-        if: github.event_name != 'pull_request'
-
-      - name: Build API Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/api.Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/denidom-api:latest
-            ${{ secrets.DOCKER_USERNAME }}/denidom-api:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build Web Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/web.Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/denidom-web:latest
-            ${{ secrets.DOCKER_USERNAME }}/denidom-web:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    steps:
-      - name: Deploy to staging server
-        run: |
-          echo "Deploying to staging environment..."
-          # Add your deployment commands here
-          # Example: ssh user@staging-server 'cd /app && docker-compose pull && docker-compose up -d'
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - name: Deploy to production server
-        run: |
-          echo "Deploying to production environment..."
-          # Add your deployment commands here
-          # Example: ssh user@production-server 'cd /app && docker-compose pull && docker-compose up -d'
-
-  notify:
-    name: Notify on Completion
-    runs-on: ubuntu-latest
-    needs: [lint, test, build]
-    if: always()
-    steps:
-      - name: Send notification
-        run: |
-          if [ "${{ needs.test.result }}" == "success" ]; then
-            echo "✅ All tests passed!"
-          else
-            echo "❌ Some tests failed!"
-          fi
+          name: mobile-web-dist
+          path: apps/mobile-web/dist
+          retention-days: 7

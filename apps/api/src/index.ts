@@ -23,6 +23,7 @@ import directoriesRoutes from './routes/directories.js'
 import documentsRoutes from './routes/documents.js'
 import usersRoutes from './routes/users.js'
 import storiesRoutes from './routes/stories.js'
+import uploadRoutes from './routes/upload.js'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 
 const app: Application = express()
@@ -99,6 +100,7 @@ app.use('/api/directories', directoriesRoutes)
 app.use('/api/documents', documentsRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/stories', storiesRoutes)
+app.use('/api/upload', uploadRoutes)
 
 // Health check with detailed status
 app.get('/api/health', async (_req, res) => {

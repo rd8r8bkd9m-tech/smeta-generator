@@ -190,3 +190,86 @@ docker compose exec api npx prisma generate
 3. **Настройте бэкапы** - автоматические ежедневные бэкапы
 4. **Мониторинг** - настройте alerting для health checks
 5. **Логирование** - отправляйте логи в централизованную систему
+
+---
+
+# Status App Deployment
+
+## Quick Start (Status App)
+
+```bash
+# Start Status App with MinIO storage
+docker compose -f docker-compose.status.yml up -d
+
+# Run migrations
+docker compose -f docker-compose.status.yml exec api pnpm db:migrate:deploy
+
+# Check services
+docker compose -f docker-compose.status.yml ps
+```
+
+### Access Points
+- **Mobile Web**: http://localhost:3000
+- **API**: http://localhost:4000
+- **MinIO Console**: http://localhost:9001
+
+### Environment Variables
+
+```env
+# Database
+POSTGRES_USER=status
+POSTGRES_PASSWORD=secure-password
+POSTGRES_DB=status_db
+
+# JWT
+JWT_SECRET=your-jwt-secret
+
+# MinIO/S3
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=secure-minio-password
+S3_BUCKET_NAME=status-app-media
+
+# Frontend
+API_URL=https://api.your-domain.com/api
+CORS_ORIGIN=https://your-domain.com
+```
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+1. **CI** (`.github/workflows/ci.yml`) - Lint, test, build
+2. **Deploy** (`.github/workflows/deploy.yml`) - Build & push Docker images
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `STAGING_HOST` | Staging server hostname |
+| `STAGING_USER` | SSH username |
+| `STAGING_SSH_KEY` | SSH private key |
+| `PRODUCTION_HOST` | Production server hostname |
+| `PRODUCTION_USER` | SSH username |
+| `PRODUCTION_SSH_KEY` | SSH private key |
+| `API_URL` | Production API URL |
+
+## S3 Storage Configuration
+
+### For AWS S3
+```env
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
+S3_BUCKET_NAME=status-media
+S3_CDN_URL=https://cdn.your-domain.com
+```
+
+### For MinIO (Self-hosted)
+```env
+S3_ENDPOINT=http://minio:9000
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_BUCKET_NAME=status-app-media
+S3_FORCE_PATH_STYLE=true
+```
