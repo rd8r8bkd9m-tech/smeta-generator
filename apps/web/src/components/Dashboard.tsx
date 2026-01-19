@@ -114,13 +114,14 @@ export default function Dashboard() {
         setProjects(projectsData)
         setClients(clientsData)
         setEstimates(estimatesData)
-      } catch (err) {
-        if (!isMounted) return
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки данных')
-      } finally {
-        if (!isMounted) return
-        setIsLoading(false)
-      }
+        } catch (err) {
+          if (!isMounted) return
+          setError(err instanceof Error ? err.message : 'Ошибка загрузки данных')
+        } finally {
+          if (isMounted) {
+            setIsLoading(false)
+          }
+        }
     }
 
     loadDashboard()

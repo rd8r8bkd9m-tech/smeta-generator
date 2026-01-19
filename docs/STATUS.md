@@ -75,6 +75,15 @@ Status App полностью готов к production:
 
 🚀 **Ready for App Store deployment!**
 
+## 💾 Enterprise Интеграция API и БД ✅
+
+- ✅ **Backend**: Реализованы DDD модули `users` и `stories` в `apps/api`
+- ✅ **Database**: Обновлена схема Prisma, добавлены модели для Status App
+- ✅ **API**: Созданы REST эндпоинты `/api/users` и `/api/stories`
+- ✅ **Infrastructure**: Реализованы HTTP репозитории на фронтенде через Axios
+- ✅ **Clean Architecture**: Полное разделение слоев Domain, Application, Infrastructure и Presentation
+- ✅ **DI**: Настроена автоматическая инъекция HTTP репозиториев
+
 ## 🚀 Запуск приложения
 
 ```bash

@@ -4,12 +4,20 @@ import { GlassCard, Badge } from '../design-system/components'
 import { FileText, Plus, Search, ChevronRight, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+interface TemplateItem {
+  id: string
+  name: string
+  unit: string
+  price: number
+  quantity?: number
+}
+
 interface Template {
   id: string
   name: string
   description: string
   category: string
-  items: any[]
+  items: TemplateItem[]
 }
 
 export default function TemplatesPage() {

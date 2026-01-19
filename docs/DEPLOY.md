@@ -30,14 +30,14 @@ EOF
 ### 3. Запуск
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 4. Проверка
 
 ```bash
 # Проверка статуса контейнеров
-docker-compose ps
+docker compose ps
 
 # Проверка health check
 curl http://localhost:4001/api/health
@@ -59,10 +59,10 @@ open http://localhost:3005
 
 ```bash
 # Применить миграции
-docker-compose exec api npx prisma migrate deploy
+docker compose exec api npx prisma migrate deploy
 
 # Seed данные (опционально)
-docker-compose exec api npx tsx prisma/seed.ts
+docker compose exec api npx tsx prisma/seed.ts
 ```
 
 ## Обновление
@@ -72,12 +72,12 @@ docker-compose exec api npx tsx prisma/seed.ts
 git pull
 
 # Пересобрать и перезапустить
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 
 # Применить миграции
-docker-compose exec api npx prisma migrate deploy
+docker compose exec api npx prisma migrate deploy
 ```
 
 ## Откат
@@ -86,20 +86,20 @@ docker-compose exec api npx prisma migrate deploy
 
 ```bash
 # Остановить текущую версию
-docker-compose down
+docker compose down
 
 # Переключиться на предыдущий коммит
 git checkout HEAD~1
 
 # Запустить
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Откат миграции БД
 
 ```bash
 # Откатить последнюю миграцию
-docker-compose exec api npx prisma migrate reset --skip-seed
+docker compose exec api npx prisma migrate reset --skip-seed
 ```
 
 ## Мониторинг
@@ -108,11 +108,11 @@ docker-compose exec api npx prisma migrate reset --skip-seed
 
 ```bash
 # Все логи
-docker-compose logs -f
+docker compose logs -f
 
 # Логи конкретного сервиса
-docker-compose logs -f api
-docker-compose logs -f web
+docker compose logs -f api
+docker compose logs -f web
 ```
 
 ### Health checks
@@ -122,10 +122,10 @@ docker-compose logs -f web
 curl http://localhost:4001/api/health
 
 # PostgreSQL
-docker-compose exec postgres pg_isready -U postgres
+docker compose exec postgres pg_isready -U postgres
 
 # Redis
-docker-compose exec redis redis-cli ping
+docker compose exec redis redis-cli ping
 ```
 
 ## Бэкап и восстановление
@@ -134,10 +134,10 @@ docker-compose exec redis redis-cli ping
 
 ```bash
 # Создать бэкап
-docker-compose exec postgres pg_dump -U postgres smeta_pro > backup_$(date +%Y%m%d).sql
+docker compose exec postgres pg_dump -U postgres smeta_pro > backup_$(date +%Y%m%d).sql
 
 # Восстановить из бэкапа
-docker-compose exec -T postgres psql -U postgres smeta_pro < backup_20260118.sql
+docker compose exec -T postgres psql -U postgres smeta_pro < backup_20260118.sql
 ```
 
 ### Бэкап Redis
@@ -145,7 +145,7 @@ docker-compose exec -T postgres psql -U postgres smeta_pro < backup_20260118.sql
 ```bash
 # Redis автоматически сохраняет данные в volume
 # Для ручного сохранения:
-docker-compose exec redis redis-cli BGSAVE
+docker compose exec redis redis-cli BGSAVE
 ```
 
 ## Troubleshooting
@@ -154,33 +154,33 @@ docker-compose exec redis redis-cli BGSAVE
 
 ```bash
 # Проверить логи
-docker-compose logs api
+docker compose logs api
 
 # Проверить переменные окружения
-docker-compose exec api env | grep -E "DATABASE|JWT|PORT"
+docker compose exec api env | grep -E "DATABASE|JWT|PORT"
 
 # Проверить подключение к БД
-docker-compose exec api npx prisma db pull
+docker compose exec api npx prisma db pull
 ```
 
 ### Web не загружается
 
 ```bash
 # Проверить nginx конфиг
-docker-compose exec web nginx -t
+docker compose exec web nginx -t
 
 # Проверить проксирование к API
-docker-compose exec web curl http://api:4000/api/health
+docker compose exec web curl http://api:4000/api/health
 ```
 
 ### Проблемы с миграциями
 
 ```bash
 # Сбросить БД (ВНИМАНИЕ: удалит все данные!)
-docker-compose exec api npx prisma migrate reset
+docker compose exec api npx prisma migrate reset
 
 # Пересоздать клиент Prisma
-docker-compose exec api npx prisma generate
+docker compose exec api npx prisma generate
 ```
 
 ## Production рекомендации

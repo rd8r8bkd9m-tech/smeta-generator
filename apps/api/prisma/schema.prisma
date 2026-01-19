@@ -8,14 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      Role     @default(USER)
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  password    String
+  role        Role     @default(USER)
+  avatar      String?
+  phoneNumber String?  @unique
+  username    String?  @unique
+  isOnline    Boolean  @default(false)
+  lastSeenAt  DateTime?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   projects       Project[]
   clients        Client[]
@@ -25,8 +30,56 @@ model User {
   changeHistory  ChangeHistory[]
   integrations   Integration[]
   documents      Document[]
+  stories        Story[]
+  reactions      StoryReaction[]
 
   @@map("users")
+}
+
+model Story {
+  id         String      @id @default(cuid())
+  type       StoryType   @default(TEXT)
+  content    String
+  background String?
+  status     StoryStatus @default(ACTIVE)
+  expiresAt  DateTime
+  viewsCount Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reactions StoryReaction[]
+
+  @@map("stories")
+}
+
+model StoryReaction {
+  id        String   @id @default(cuid())
+  type      String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@map("story_reactions")
+}
+
+enum StoryType {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum StoryStatus {
+  ACTIVE
+  EXPIRED
+  DELETED
 }
 
 model Client {

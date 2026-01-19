@@ -116,6 +116,20 @@
 
 **Причина**: Переиспользование кода, единая система сборки, простое управление зависимостями.
 
+## 💾 Реальное API и БД (Enterprise)
+
+### Backend Модули (DDD)
+**Решение**: Добавлены модули `users` и `stories` в `apps/api` с использованием DDD паттернов (Entities, Repositories, Use Cases).
+
+### Persistence (Prisma)
+**Решение**: Обновлена Prisma схема, добавлены модели `User`, `Story`, `StoryReaction`. Использован PostgreSQL как основная БД.
+
+### Frontend Инфраструктура
+**Решение**: Реализованы `HttpUserRepository` и `HttpStoryRepository` на фронтенде, которые используют Axios для связи с бэкендом.
+
+### Dependency Injection
+**Решение**: Использован `DependencyContainer` для автоматического переключения между `InMemory` и `Http` репозиториями без изменения бизнес-логики UI.
+
 ## 🎯 UX/UI решения
 
 ### Stories паттерн

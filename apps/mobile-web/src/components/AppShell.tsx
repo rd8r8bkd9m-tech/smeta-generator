@@ -14,9 +14,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   showBottomNav = true
 }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-bg0 via-bg1 to-bg0 text-textPrimary">
+    <div className="min-h-screen bg-bg0 text-textPrimary">
       {/* Фоновый градиент */}
-      <div className="fixed inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/5 pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-br from-accentLight via-transparent to-accentLight pointer-events-none" />
 
       {/* Основной контент */}
       <div className="relative min-h-screen flex flex-col safe-area-inset">

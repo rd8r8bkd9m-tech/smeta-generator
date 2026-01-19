@@ -36,7 +36,30 @@ interface ProjectOption {
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const API_URL = '/api'
-const DEMO_USER_ID = 'demo-user-001'
+
+interface TemplateItem {
+  id: string
+  name: string
+  unit: string
+  price: number
+  quantity?: number
+  total?: number
+}
+
+interface TemplateResponse {
+  id: string
+  name: string
+  description?: string
+  items: TemplateItem[]
+}
+
+interface EstimateApiResponse {
+  id: string
+  name?: string
+  description?: string | null
+  projectId?: string | null
+  items?: Array<ManualEstimateItem & { type?: 'FER' | 'COMMERCIAL'; code?: string }>
+}
 
 export default function CalculatorPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,7 +69,7 @@ export default function CalculatorPage() {
   const [aiEstimateItems, setAiEstimateItems] = useState<AIEstimateItem[]>([])
   const [generatedEstimate, setGeneratedEstimate] = useState<GeneratedEstimate | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const { addNotification } = useStore()
+  const { addNotification, user } = useStore()
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [estimateName, setEstimateName] = useState('Новая смета')
@@ -64,7 +87,9 @@ export default function CalculatorPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch(`${API_URL}/projects`)
+        const response = await fetch(
+          `${API_URL}/projects${user?.id ? `?userId=${user.id}` : ''}`
+        )
         if (!response.ok) {
           throw new Error('Failed to fetch projects')
         }
@@ -76,7 +101,7 @@ export default function CalculatorPage() {
     }
 
     fetchProjects()
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     const templateId = searchParams.get('template')
@@ -97,11 +122,11 @@ export default function CalculatorPage() {
   const loadTemplate = async (id: string) => {
     try {
       const response = await fetch('/api/calculator/templates')
-      const templates = await response.json()
-      const template = templates.find((t: any) => t.id === id)
+      const templates = (await response.json()) as TemplateResponse[]
+      const template = templates.find((t) => t.id === id)
       
       if (template) {
-        const manualItems: ManualEstimateItem[] = template.items.map((item: any) => {
+        const manualItems: ManualEstimateItem[] = template.items.map((item) => {
           const quantity = item.quantity ?? 1
           const price = item.price ?? 0
           return {
@@ -129,24 +154,24 @@ export default function CalculatorPage() {
       if (!response.ok) {
         throw new Error('Failed to load estimate')
       }
-      const estimate = await response.json()
+      const estimate = (await response.json()) as EstimateApiResponse
       const rawItems = Array.isArray(estimate.items) ? estimate.items : []
-      const hasAiType = rawItems.some((item: any) => item.type === 'FER' || item.type === 'COMMERCIAL')
+      const hasAiType = rawItems.some((item) => item.type === 'FER' || item.type === 'COMMERCIAL')
 
       if (hasAiType) {
-        const aiItems = rawItems.map((item: any) => ({
+        const aiItems = rawItems.map((item) => ({
           ...item,
           total: item.total ?? item.quantity * item.price,
-        }))
+        })) as AIEstimateItem[]
         setAiEstimateItems(aiItems)
         setViewMode('ai')
         setGeneratedEstimate({
           items: aiItems,
-          subtotal: aiItems.reduce((sum: number, item: any) => sum + (item.total ?? 0), 0),
+          subtotal: aiItems.reduce((sum, item) => sum + (item.total ?? 0), 0),
           parsed: { works: [] },
         })
       } else {
-        const manualItems = rawItems.map((item: any) => ({
+        const manualItems: ManualEstimateItem[] = rawItems.map((item) => ({
           id: item.id,
           name: item.name,
           unit: item.unit,
@@ -303,8 +328,8 @@ export default function CalculatorPage() {
     items.reduce((sum, item) => sum + (item.total ?? item.quantity * item.price), 0)
 
   const inferEstimateType = (items: Array<AIEstimateItem | ManualEstimateItem>) => {
-    const hasFer = items.some((item: any) => item.type === 'FER')
-    const hasCommercial = items.some((item: any) => item.type === 'COMMERCIAL')
+    const hasFer = items.some((item) => 'type' in item && item.type === 'FER')
+    const hasCommercial = items.some((item) => 'type' in item && item.type === 'COMMERCIAL')
     if (hasFer && hasCommercial) return 'MIXED'
     if (hasFer) return 'FER'
     return 'COMMERCIAL'
@@ -336,7 +361,7 @@ export default function CalculatorPage() {
         total: subtotal,
         type: inferEstimateType(normalizedItems),
         projectId: selectedProjectId || undefined,
-        userId: DEMO_USER_ID,
+        ...(user?.id ? { userId: user.id } : {}),
       }
 
       const endpoint = estimateId

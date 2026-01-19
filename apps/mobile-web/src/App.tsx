@@ -2,6 +2,9 @@ import { Routes, Route } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { UiKitPage } from './pages/UiKitPage'
 
+// Initialize Dependency Injection
+import './infrastructure/config/di-config'
+
 // Auth pages
 import { PhoneAuthPage } from './pages/auth/PhoneAuthPage'
 import { CodeAuthPage } from './pages/auth/CodeAuthPage'

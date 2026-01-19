@@ -23,7 +23,7 @@ export const BottomNavigation: React.FC = () => {
   return (
     <div className="sticky bottom-0 left-0 right-0 z-50">
       {/* Glass background */}
-      <div className="glass border-t border-white/10" />
+      <div className="absolute inset-0 glass border-t border-stroke -z-10" />
 
       {/* Navigation */}
       <nav className="relative px-4 py-2 flex items-center justify-around">
@@ -62,7 +62,7 @@ export const BottomNavigation: React.FC = () => {
                 className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 ${
                   isActive
                     ? 'text-accent bg-accentLight'
-                    : 'text-textSecondary hover:text-textPrimary hover:bg-white/5'
+                    : 'text-textSecondary hover:text-textPrimary hover:bg-surface'
                 }`}
               >
                 <Icon size={20} />
