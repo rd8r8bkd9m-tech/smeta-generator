@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Check, Share, Home } from 'lucide-react'
@@ -9,10 +9,14 @@ import { useToast } from '../hooks/useToast'
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const hasShownToast = useRef(false)
 
   useEffect(() => {
-    // Показываем toast при входе на страницу
-    toast.success('Статус опубликован!', 'Он появится в ленте через несколько секунд')
+    // Показываем toast только один раз при монтировании
+    if (!hasShownToast.current) {
+      hasShownToast.current = true
+      toast.success('Статус опубликован!', 'Он появится в ленте через несколько секунд')
+    }
   }, [toast])
 
   return (
